@@ -1,9 +1,9 @@
 {
   "packageName": "dev.akash.stars.yts",
-  "name": "yts",
+  "name": "YTS",
   "version": 1,
-  "baseUrl": "https://example.com",
-  "description": "yts plugin (Sky Gen 2)",
+  "baseUrl": "https://yts.bz",
+  "description": "YTS Provider",
   "authors": [
     "Akash"
   ],
@@ -11,6 +11,6 @@
     "en"
   ],
   "categories": [
-    "Others"
+    "Movie"
   ]
 }
