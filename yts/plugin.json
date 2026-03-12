@@ -1,0 +1,16 @@
+{
+  "packageName": "dev.akash.stars.yts",
+  "name": "yts",
+  "version": 1,
+  "baseUrl": "https://example.com",
+  "description": "yts plugin (Sky Gen 2)",
+  "authors": [
+    "Akash"
+  ],
+  "languages": [
+    "en"
+  ],
+  "categories": [
+    "Others"
+  ]
+}
