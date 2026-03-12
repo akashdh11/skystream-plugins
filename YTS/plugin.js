@@ -65,7 +65,7 @@
      * @param {string} url
      * @param {(res: Response) => void} cb 
      */
-    function load(url, cb) {
+    async function load(url, cb) {
         try {
             const html = await _fetch(url);
             const title = html.match(/<div[^>]*id="movie-info"[^>]*>[\s\S]*?<h1[^>]*>([^<]+)<\/h1>/)?.[1]?.trim() || "Unknown";
