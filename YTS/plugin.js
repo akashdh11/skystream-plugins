@@ -17,7 +17,7 @@
      * Loads the home screen categories.
      * @param {(res: Response) => void} cb 
      */
-    const MAIN_URL = manifest.baseUrl
+    const MAIN_URL = manifest.baseUrl;
     const TRACKER_API = "https://newtrackon.com/api/stable";
 
     function _parseMovies(html) {
