@@ -1,0 +1,16 @@
+{
+  "packageName": "dev.akash.stars.bdixtv",
+  "name": "BDIX TV",
+  "version": 1,
+  "baseUrl": "https://example.com",
+  "description": "BDIX TV plugin for skystream-plugins",
+  "authors": [
+    "Developer"
+  ],
+  "languages": [
+    "en"
+  ],
+  "categories": [
+    "Others"
+  ]
+}

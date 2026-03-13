@@ -16,7 +16,7 @@
      * Helper to fetch the M3U playlist.
      */
     async function fetchM3U() {
-        const url = "https://bdix.spidy.online/PLAYLIST/AYNA/ayna.php";
+        const url = `${manifest.baseUrl}/PLAYLIST/AYNA/ayna.php`;
         const headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0",
             "Accept": "*/*",
