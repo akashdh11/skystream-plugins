@@ -24,10 +24,11 @@
             "Connection": "keep-alive"
         };
         const response = await http_get(url, headers);
-        if (response && response.status >= 200 && response.status < 300) {
+        const status = response.status !== undefined ? response.status : response.statusCode;
+        if (status >= 200 && status < 300) {
             return response.body.trim();
         } else {
-            throw new Error(`HTTP Error ${response ? response.status : 'No Response'} fetching AYNA 2 M3U`);
+            throw new Error(`HTTP Error ${status || 'No Response'} fetching AYNA 2 M3U`);
         }
     }
 
