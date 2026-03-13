@@ -38,12 +38,21 @@
                     ],
                     "Editor's Choice": [
                         new MultimediaItem({ 
-                            title: "Featured Item (Thumbnail)", 
-                            url: `${manifest.baseUrl}/featured`, 
-                            posterUrl: `https://placehold.co/400x600.png?text=Thumbnail+Poster`, 
-                            type: "movie",
-                            description: "This item appears in a thumbnail row.",
-                            headers: { "Referer": `${manifest.baseUrl}` } 
+                            title: "Example Series (Thumbnail)", 
+                            url: `${manifest.baseUrl}/series`, 
+                            posterUrl: `https://placehold.co/400x600.png?text=Series+Poster`, 
+                            type: "series",
+                            description: "This is a sample series with episodes.",
+                            headers: { "Referer": `${manifest.baseUrl}` },
+                            episodes: [
+                                new Episode({ 
+                                    name: "Pilot", 
+                                    url: `${manifest.baseUrl}/series/s1e1`, 
+                                    season: 1, 
+                                    episode: 1, 
+                                    posterUrl: `https://placehold.co/400x600.png?text=EP1+Poster` 
+                                })
+                            ]
                         })
                     ]
                 } 
@@ -65,12 +74,20 @@
                 success: true, 
                 data: [
                         new MultimediaItem({ 
-                            title: "Example Movie", 
+                            title: "Example Movie (Search Result)", 
                             url: `${manifest.baseUrl}/movie`, 
-                            posterUrl: `https://placehold.co/400x600.png?text=Search+Poster`, 
+                            posterUrl: `https://placehold.co/400x600.png?text=Search+Movie`, 
                             type: "movie", 
                             bannerUrl: `https://placehold.co/1280x720.png?text=Search+Banner`,
                             description: "Plot summary here...", 
+                            headers: { "Referer": `${manifest.baseUrl}` } 
+                        }),
+                        new MultimediaItem({ 
+                            title: "Example Series (Search Result)", 
+                            url: `${manifest.baseUrl}/series`, 
+                            posterUrl: `https://placehold.co/400x600.png?text=Search+Series`, 
+                            type: "series", 
+                            description: "A series found in search.", 
                             headers: { "Referer": `${manifest.baseUrl}` } 
                         })
                 ] 
@@ -88,24 +105,25 @@
     async function load(url, cb) {
         try {
             // Standard: Return a single item with full metadata
+            // Note: If this were a series, you'd populate episodes here.
             cb({ 
                 success: true, 
                 data: new MultimediaItem({
-                    title: "Example Movie Full Details",
+                    title: "Example Series Full Details",
                     url: url,
-                    posterUrl: `https://placehold.co/400x600.png?text=Details+Poster`,
-                    type: "movie", 
-                    bannerUrl: `https://placehold.co/1280x720.png?text=Details+Banner`,
-                    description: "This is a detailed description of the movie.", 
+                    posterUrl: `https://placehold.co/400x600.png?text=Series+Details`,
+                    type: "series", 
+                    bannerUrl: `https://placehold.co/1280x720.png?text=Series+Banner`,
+                    description: "This is a detailed description of the series.", 
                     headers: { "Referer": `${manifest.baseUrl}` }, 
                     episodes: [
                         new Episode({ 
-                            name: "Episode 1", 
-                            url: `${manifest.baseUrl}/watch/1`, 
+                            name: "Pilot Episode", 
+                            url: `${manifest.baseUrl}/watch/s1e1`, 
                             season: 1, 
                             episode: 1, 
-                            description: "Episode summary...", 
-                            posterUrl: `https://placehold.co/400x600.png?text=Episode+Poster`,
+                            description: "The beginning of the journey.", 
+                            posterUrl: `https://placehold.co/400x600.png?text=EP1+Poster`,
                             headers: { "Referer": `${manifest.baseUrl}` } 
                         })
                     ]
