@@ -54,6 +54,59 @@
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.darktv.sky"
   },
   {
+    "packageName": "dev.akash.stars.dishtv",
+    "name": "Dish TV",
+    "version": 1,
+    "baseUrl": "https://dishtv.in",
+    "description": "Dish TV Live Channels (Real-world IPTV)",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "en",
+      "hi"
+    ],
+    "categories": [
+      "LiveTv"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.dishtv.sky"
+  },
+  {
+    "packageName": "dev.akash.stars.4khd",
+    "name": "FourKHDHub",
+    "version": 1,
+    "baseUrl": "https://4khdhub.dad",
+    "description": "4K Movies and TV Shows (VOD)",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "en"
+    ],
+    "categories": [
+      "Movie",
+      "TvSeries"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.4khd.sky"
+  },
+  {
+    "packageName": "dev.akash.stars.freetv",
+    "name": "Free TV",
+    "version": 1,
+    "baseUrl": "https://freetv.to",
+    "description": "Global Free Live TV with custom decryption",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "en"
+    ],
+    "categories": [
+      "LiveTv"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.freetv.sky"
+  },
+  {
     "packageName": "dev.akash.stars.yts",
     "name": "YTS",
     "version": 1,
