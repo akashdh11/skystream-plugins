@@ -26,7 +26,14 @@
                 const item = items[i];
                 try {
                     const link = item.match(/href="([^"]+)"/)?.[1], poster = item.match(/src="([^"]+)"/)?.[1], title = item.match(/class="browse-movie-title"[^>]*>([^<]+)</)?.[1];
-                    if (link && title) results.push({ url: link.startsWith("http") ? link : MAIN_URL + link, title: title.trim(), posterUrl: poster || "", type: "movie" });
+                    if (link && title) {
+                        results.push(new MultimediaItem({ 
+                            url: link.startsWith("http") ? link : MAIN_URL + link, 
+                            title: title.trim(), 
+                            posterUrl: poster || "", 
+                            type: "movie" 
+                        }));
+                    }
                 } catch (e) {}
             }
             return results
@@ -74,8 +81,30 @@
             const year = parseInt(html.match(/<div[^>]*id="movie-info"[^>]*>[\s\S]*?<h2[^>]*>([0-9]{4})<\/h2>/)?.[1] || "0");
             let desc = html.match(/Plot summary<\/[hH][234]>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/)?.[1]?.replace(/<[^>]+>/g, "").trim() || "";
             const rating = parseFloat(html.match(/itemprop=["']ratingValue["'][^>]*>([0-9.]+)/)?.[1] || "0.0");
-            cb({ success: true, data: { url, title, posterUrl: poster, year, description: desc, rating, type: "movie", isFolder: false, episodes: [{ name: "Full Movie", url, season: 1, episode: 1, posterUrl: poster, description: desc }] } });
-        } catch (e) { cb({ success: false, errorCode: "PARSE_ERROR" }); }
+            
+            const movie = new MultimediaItem({
+                url,
+                title,
+                posterUrl: poster,
+                type: "movie",
+                description: desc,
+                episodes: [
+                    new Episode({
+                        name: "Full Movie",
+                        url: url,
+                        season: 1,
+                        episode: 1,
+                        posterUrl: poster,
+                        description: desc
+                    })
+                ]
+            });
+            // Attach extra metadata
+            movie.year = year;
+            movie.rating = rating;
+
+            cb({ success: true, data: movie });
+        } catch (e) { cb({ success: false, errorCode: "PARSE_ERROR", message: e.stack }); }
     }
 
     /**
@@ -94,11 +123,11 @@
                 const tm = tag.match(/title="([^"]*)"/), qt = (m[2].replace(/<[^>]+>/g, "").trim() || (tm ? tm[1] : "")).replace(/Download|Torrent|Magnet|Movie|YIFY/gi, "").trim();
                 let q = "Auto"; if (qt.includes("2160p")) q = "4K"; else if (qt.includes("1080p")) q = "1080p"; else if (qt.includes("720p")) q = "720p";
                 let mag = "magnet:?xt=urn:btih:" + hash + "&dn=" + hash; trList.forEach(t => mag += "&tr=" + encodeURIComponent(t.trim()));
-                links.push({ url: mag, quality: qt || q, headers: {} });
+                links.push(new StreamResult({ url: mag, quality: qt || q, headers: {} }));
             }
-            if (!links.length) { const mRegex = /href="(magnet:\?xt=urn:btih:[^"]+)"/g; while ((m = mRegex.exec(html)) !== null) links.push({ url: m[1], quality: "Magnet", headers: {} }); }
+            if (!links.length) { const mRegex = /href="(magnet:\?xt=urn:btih:[^"]+)"/g; while ((m = mRegex.exec(html)) !== null) links.push(new StreamResult({ url: m[1], quality: "Magnet", headers: {} })); }
             cb({ success: true, data: links.sort((a,b) => b.quality.includes("1080p") ? 1 : -1) });
-        } catch (e) { cb({ success: false, errorCode: "PARSE_ERROR" }); }
+        } catch (e) { cb({ success: false, errorCode: "PARSE_ERROR", message: e.stack }); }
     }
 
     // Export to global scope for namespaced IIFE capture
