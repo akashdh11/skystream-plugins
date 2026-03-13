@@ -1,0 +1,21 @@
+{
+  "packageName": "dev.akash.stars.animesalt",
+  "name": "Animesalt",
+  "version": 1,
+  "baseUrl": "https://animesalt.ac",
+  "description": "Port of CloudStream Animesalt extension",
+  "authors": [
+    "Akash"
+  ],
+  "languages": [
+    "hi",
+    "jp",
+    "en"
+  ],
+  "categories": [
+    "Anime",
+    "Cartoon",
+    "Movie",
+    "Series"
+  ]
+}
