@@ -5,7 +5,7 @@
     // manifest is injected at runtime
 
     // --- Constants ---
-    const API_URL = "https://api.allmanga.to/api";
+    const API_URL = "https://api.allanime.day/api";
     const HEADERS = {
         "app-version": "android_c-247",
         "from-app": "allmanga",
@@ -29,11 +29,26 @@
 
     // --- Helpers ---
     async function queryGraph(variables, hash) {
-        const url = `${API_URL}?variables=${JSON.stringify(variables)}&extensions=${JSON.stringify({
-            persistedQuery: { version: 1, sha256Hash: hash }
-        })}`;
-        const res = await http_get(url, { headers: HEADERS });
-        return JSON.parse(res);
+        const body = {
+            variables: variables,
+            extensions: {
+                persistedQuery: {
+                    version: 1,
+                    sha256Hash: hash
+                }
+            }
+        };
+        
+        try {
+            const res = await http_post(API_URL, HEADERS, JSON.stringify(body));
+            if (!res || res.trim().startsWith("<!DOCTYPE")) {
+               throw new Error("HTTP_BLOCK: Cloudflare or Network Error");
+            }
+            return JSON.parse(res);
+        } catch (e) {
+            console.error("GraphQL Error: " + e.message);
+            throw e;
+        }
     }
 
     function toMultimediaItem(edge) {
