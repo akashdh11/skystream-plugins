@@ -1,0 +1,17 @@
+{
+  "packageName": "dev.akash.stars.ringz",
+  "name": "RingZ",
+  "version": 1,
+  "baseUrl": "https://dataapi.yomoviesapk.com",
+  "description": "RingZ Movies & Series Provider",
+  "authors": [
+    "Akash"
+  ],
+  "languages": [
+    "hi"
+  ],
+  "categories": [
+    "Movie",
+    "TvSeries"
+  ]
+}

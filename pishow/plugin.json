@@ -1,0 +1,16 @@
+{
+  "packageName": "dev.akash.stars.pishow",
+  "name": "PISHOW",
+  "version": 1,
+  "baseUrl": "https://playlist-storage.pages.dev/PLAYLIST/playboxtv.m3u",
+  "description": "PISHOW Live Channels",
+  "authors": [
+    "Akash"
+  ],
+  "languages": [
+    "en"
+  ],
+  "categories": [
+    "LiveTv"
+  ]
+}
