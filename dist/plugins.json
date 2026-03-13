@@ -1,5 +1,22 @@
 [
   {
+    "packageName": "dev.akash.stars.yts",
+    "name": "YTS",
+    "version": 1,
+    "baseUrl": "https://yts.bz",
+    "description": "YTS Provider",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "en"
+    ],
+    "categories": [
+      "Movie"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.yts.sky"
+  },
+  {
     "packageName": "dev.akash.stars.ayna2",
     "name": "AYNA 2",
     "version": 1,
@@ -73,7 +90,7 @@
   },
   {
     "packageName": "dev.akash.stars.4khd",
-    "name": "FourKHDHub",
+    "name": "4K HD",
     "version": 1,
     "baseUrl": "https://4khdhub.dad",
     "description": "4K Movies and TV Shows (VOD)",
@@ -107,11 +124,11 @@
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.freetv.sky"
   },
   {
-    "packageName": "dev.akash.stars.yts",
-    "name": "YTS",
+    "packageName": "dev.akash.stars.jiobd",
+    "name": "Jio BD",
     "version": 1,
-    "baseUrl": "https://yts.bz",
-    "description": "YTS Provider",
+    "baseUrl": "https://ranapk.short.gy",
+    "description": "Jio BD Live TV and Sports",
     "authors": [
       "Akash"
     ],
@@ -119,8 +136,44 @@
       "en"
     ],
     "categories": [
-      "Movie"
+      "LiveTv"
     ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.yts.sky"
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.jiobd.sky"
+  },
+  {
+    "packageName": "dev.akash.stars.liveevents",
+    "name": "Live Events",
+    "version": 1,
+    "baseUrl": "https://cfyjgfbnjjgv103.top",
+    "description": "Live Sports Events and Highlights",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "en"
+    ],
+    "categories": [
+      "LiveTv"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.liveevents.sky"
+  },
+  {
+    "packageName": "dev.akash.stars.moviesdrive",
+    "name": "Movies Drive",
+    "version": 1,
+    "baseUrl": "https://new1.moviesdrives.my",
+    "description": "Premium VOD Scraper with metadata sync",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "en",
+      "hi"
+    ],
+    "categories": [
+      "Movie",
+      "TvSeries"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.moviesdrive.sky"
   }
 ]
