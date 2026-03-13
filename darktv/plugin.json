@@ -1,0 +1,17 @@
+{
+  "packageName": "dev.cncverse.darktv",
+  "name": "DARK TV",
+  "version": 1,
+  "baseUrl": "https://ranapk.online",
+  "description": "DARK TV Live Channels (v2 Standard)",
+  "authors": [
+    "CNCVerse"
+  ],
+  "languages": [
+    "en"
+  ],
+  "categories": [
+    "LiveTv",
+    "Others"
+  ]
+}
