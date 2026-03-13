@@ -68,7 +68,7 @@
         constructor(html) {
             this.root = new JNode("root");
             let current = this.root;
-            const re = /<\/?[a-z0-0-]+(?:\s+[a-z0-9-]+(?:=(?:"[^"]*"|'[^']*'|[^\s>]+))?)*\s*\/?>|[^<]+/gi;
+            const re = /<\/?[a-z0-9]+(?:\s+[a-z0-9-]+(?:=(?:"[^"]*"|'[^']*'|[^\s>]+))?)*\s*\/?>|[^<]+/gi;
             let m;
             while ((m = re.exec(html))) {
                 const token = m[0];
@@ -90,7 +90,21 @@
                     
                     const node = new JNode(tag, attrs, current);
                     current.children.push(node);
-                    if (!selfClosing) current = node;
+                    if (!selfClosing) {
+                        current = node;
+                        if (tag === "script" || tag === "style") {
+                            const endTag = `</${tag}>`;
+                            const endIndex = html.indexOf(endTag, re.lastIndex);
+                            if (endIndex !== -1) {
+                                const content = html.substring(re.lastIndex, endIndex);
+                                const t = new JNode(null, {}, current);
+                                t.text = content;
+                                current.children.push(t);
+                                re.lastIndex = endIndex + endTag.length;
+                                current = current.parent;
+                            }
+                        }
+                    }
                     continue;
                 }
                 const text = token.trim();
@@ -131,7 +145,6 @@
             const type = url.includes("-series-") || url.includes("/series/") ? "series" : "movie";
             
             if (url) {
-                console.log(`Added: ${title} (${type})`);
                 items.push(new MultimediaItem({
                     title, 
                     url, 
@@ -190,13 +203,21 @@
             let poster = null;
             doc.select("meta").forEach(m => { if (m.attr("property") === "og:image") poster = fixUrl(m.attr("content")); });
             
-            const description = doc.find(".movie-description")?.textContent()?.trim() || "";
+            const description = doc.find(".movie-description")?.textContent()?.trim() || res.body.substring(0, 500);
             const isSeries = url.includes("-series-") || doc.root.textContent().includes("Download Individual Episodes");
 
             if (!isSeries) {
-                const movieLinks = doc.select("a.btn")
-                    .map(a => ({ name: a.find("span")?.textContent()?.trim() || a.textContent()?.trim() || "Download", url: fixUrl(a.attr("href")) }))
-                    .filter(l => l.url && (l.url.includes("gadgetsweb.xyz") || l.url.includes("hubcloud") || l.url.includes("drive")));
+                const linksRegex = /href="(https?:\/\/(?:gadgetsweb\.xyz|hubcloud|hubdrive|drive\.google\.com)[^"]+)"/gi;
+                const movieLinks = [];
+                let m;
+                const seenUrls = new Set();
+                while ((m = linksRegex.exec(res.body)) !== null) {
+                    const url = m[1];
+                    if (!seenUrls.has(url)) {
+                        seenUrls.add(url);
+                        movieLinks.push({ name: "Direct", url: fixUrl(url) });
+                    }
+                }
                 
                 cb({
                     success: true,
