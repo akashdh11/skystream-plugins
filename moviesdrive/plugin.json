@@ -1,0 +1,18 @@
+{
+  "packageName": "dev.akash.stars.moviesdrive",
+  "name": "Movies Drive",
+  "version": 1,
+  "baseUrl": "https://new1.moviesdrives.my",
+  "description": "Premium VOD Scraper with metadata sync",
+  "authors": [
+    "Akash"
+  ],
+  "languages": [
+    "en",
+    "hi"
+  ],
+  "categories": [
+    "Movie",
+    "TvSeries"
+  ]
+}
