@@ -21,15 +21,16 @@
     "packageName": "dev.akash.stars.bdixtv",
     "name": "BDIX TV",
     "version": 1,
-    "baseUrl": "https://example.com",
-    "description": "BDIX TV plugin for skystream-plugins",
+    "baseUrl": "https://tv.noobon.top",
+    "description": "BDIX TV Live Channels",
     "authors": [
-      "Developer"
+      "Akash"
     ],
     "languages": [
       "en"
     ],
     "categories": [
+      "LiveTv",
       "Others"
     ],
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.bdixtv.sky"
