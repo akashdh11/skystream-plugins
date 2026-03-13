@@ -3,10 +3,10 @@
     "packageName": "dev.akash.stars.ayna2",
     "name": "AYNA 2",
     "version": 1,
-    "baseUrl": "https://bdix.spidy.online/PLAYLIST/AYNA",
-    "description": "AYNA 2 Live Channels (v2 Standard)",
+    "baseUrl": "https://bdix.spidy.online",
+    "description": "AYNA 2 Live Channels",
     "authors": [
-      "CNCVerse"
+      "Akash"
     ],
     "languages": [
       "en"
@@ -16,6 +16,23 @@
       "Others"
     ],
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.ayna2.sky"
+  },
+  {
+    "packageName": "dev.akash.stars.bdixtv",
+    "name": "BDIX TV",
+    "version": 1,
+    "baseUrl": "https://example.com",
+    "description": "BDIX TV plugin for skystream-plugins",
+    "authors": [
+      "Developer"
+    ],
+    "languages": [
+      "en"
+    ],
+    "categories": [
+      "Others"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.bdixtv.sky"
   },
   {
     "packageName": "dev.akash.stars.yts",
