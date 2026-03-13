@@ -19,25 +19,37 @@
      */
     async function getHome(cb) {
         try {
-            // Standard: Return a Map of Category -> List of items
+            // Note: "Trending" is a reserved category promoted to the Hero Carousel.
+            // Other categories appear as horizontal thumbnail rows.
+            // If "Trending" is missing, the first available category is used for the carousel.
             cb({ 
                 success: true, 
                 data: { 
                     "Trending": [
                         new MultimediaItem({ 
-                            title: "Example Movie", 
+                            title: "Example Movie (Carousel)", 
                             url: `${manifest.baseUrl}/movie`, 
-                            posterUrl: `${manifest.baseUrl}/poster.jpg`, 
-                            type: "movie", // Valid types: movie, series, anime, livestream
-                            bannerUrl: `${manifest.baseUrl}/banner.jpg`, // (optional)
-                            description: "Plot summary here...", // (optional)
-                            headers: { "Referer": `${manifest.baseUrl}` } // (optional)
+                            posterUrl: `https://placehold.co/400x600?text=Trending+Poster`, 
+                            type: "movie",
+                            bannerUrl: `https://placehold.co/1280x720?text=Trending+Banner`, 
+                            description: "This item appears in the top carousel because it's in 'Trending'.",
+                            headers: { "Referer": `${manifest.baseUrl}` } 
                         })
-                    ] 
+                    ],
+                    "Editor's Choice": [
+                        new MultimediaItem({ 
+                            title: "Featured Item (Thumbnail)", 
+                            url: `${manifest.baseUrl}/featured`, 
+                            posterUrl: `https://placehold.co/400x600?text=Thumbnail+Poster`, 
+                            type: "movie",
+                            description: "This item appears in a thumbnail row.",
+                            headers: { "Referer": `${manifest.baseUrl}` } 
+                        })
+                    ]
                 } 
             });
         } catch (e) {
-            cb({ success: false, errorCode: "PARSE_ERROR", message: (e instanceof Error) ? e.message : String(e) });
+            cb({ success: false, errorCode: "PARSE_ERROR", message: e.stack });
         }
     }
 
