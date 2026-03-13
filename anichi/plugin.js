@@ -18,7 +18,8 @@
         popular: "31a117653812a2547fd981632e8c99fa8bf8a75c4ef1a77a1567ef1741a7ab9c",
         detail: "bb263f91e5bdd048c1c978f324613aeccdfe2cbc694a419466a31edb58c0cc0b",
         server: "5f1a64b73793cc2234a389cf3a8f93ad82de7043017dd551f38f65b89daa65e0",
-        mainPage: "06327bc10dd682e1ee7e07b6db9c16e9ad2fd56c1b769e47513128cd5c9fc77a"
+        mainPage: "06327bc10dd682e1ee7e07b6db9c16e9ad2fd56c1b769e47513128cd5c9fc77a",
+        showsMetadata: "9de1b73e302fa5e471990ed8229c9ad330b3f82a92a288743fb67309520a1996"
     };
 
     // --- Settings ---
@@ -52,13 +53,14 @@
     }
 
     function toMultimediaItem(edge) {
+        if (!edge) return null;
         const posterUrl = edge.thumbnail?.startsWith("http") 
             ? edge.thumbnail 
-            : `https://wp.youtube-anime.com/aln.youtube-anime.com/${edge.thumbnail}`;
+            : edge.thumbnail ? `https://wp.youtube-anime.com/aln.youtube-anime.com/${edge.thumbnail}` : null;
 
         return new MultimediaItem({
             title: edge.name || edge.englishName || edge.nativeName || "Unknown",
-            url: edge._id, // Store ID as URL
+            url: edge._id || edge.showId, 
             posterUrl: posterUrl,
             type: edge.type?.toLowerCase().includes("movie") ? "movie" : "anime",
             year: edge.airedStart?.year,
@@ -231,7 +233,18 @@
                 });
             });
 
-            const recommendations = show.relatedShows?.map(r => toMultimediaItem(r)) || [];
+            // Resolve recommendations metadata
+            const relatedIds = (show.relatedShows || []).map(r => r.showId).filter(id => id);
+            let recommendations = [];
+            if (relatedIds.length > 0) {
+               try {
+                   const metaRes = await queryGraph({ showIds: relatedIds }, HASHES.showsMetadata);
+                   const metaShows = metaRes.data?.showsMetadata || metaRes.data?.shows || [];
+                   recommendations = metaShows.map(toMultimediaItem).filter(i => i);
+               } catch (e) {
+                   console.error("Failed to fetch recommendations metadata: " + e.message);
+               }
+            }
 
             const result = new MultimediaItem({
                 title: title,
