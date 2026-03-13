@@ -24,17 +24,15 @@
             const results = [], items = html.split('<div class="browse-movie-wrap');
             for (let i = 1; i < items.length; i++) {
                 const item = items[i];
-                try {
-                    const link = item.match(/href="([^"]+)"/)?.[1], poster = item.match(/src="([^"]+)"/)?.[1], title = item.match(/class="browse-movie-title"[^>]*>([^<]+)</)?.[1];
-                    if (link && title) {
-                        results.push(new MultimediaItem({ 
-                            url: link.startsWith("http") ? link : MAIN_URL + link, 
-                            title: title.trim(), 
-                            posterUrl: poster || "", 
-                            type: "movie" 
-                        }));
-                    }
-                } catch (e) {}
+                const link = item.match(/href="([^"]+)"/)?.[1], poster = item.match(/src="([^"]+)"/)?.[1], title = item.match(/class="browse-movie-title"[^>]*>([^<]+)</)?.[1];
+                if (link && title) {
+                    results.push(new MultimediaItem({ 
+                        url: link.startsWith("http") ? link : MAIN_URL + link, 
+                        title: title.trim(), 
+                        posterUrl: poster || "", 
+                        type: "movie" 
+                    }));
+                }
             }
             return results
         }
