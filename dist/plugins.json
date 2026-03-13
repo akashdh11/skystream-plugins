@@ -39,6 +39,28 @@
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.animedekho.sky"
   },
   {
+    "packageName": "dev.akash.stars.animesalt",
+    "name": "Animesalt",
+    "version": 1,
+    "baseUrl": "https://animesalt.ac",
+    "description": "Port of CloudStream Animesalt extension",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "hi",
+      "jp",
+      "en"
+    ],
+    "categories": [
+      "Anime",
+      "Cartoon",
+      "Movie",
+      "Series"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.animesalt.sky"
+  },
+  {
     "packageName": "dev.akash.stars.ayna2",
     "name": "AYNA 2",
     "version": 1,
