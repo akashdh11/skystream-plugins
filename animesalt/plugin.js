@@ -7,22 +7,33 @@
         try { return JSON.parse(data); } catch (e) { return null; }
     }
 
-    function toMedia(element, type = "anime") {
+    function toMedia(element, type = "series") {
         const lnk = element.querySelector('a');
         if (!lnk) return null;
-        const href = lnk.getAttribute('href');
+        const href = lnk.getAttribute('href') || "";
         const title = element.querySelector('header h2')?.textContent?.trim() || "Untitled";
         const img = element.querySelector('img');
         let poster = img?.getAttribute('data-src') || img?.getAttribute('data-lazy-src') || img?.getAttribute('src');
         if (poster?.startsWith('data:image')) {
              poster = img?.getAttribute('data-src') || img?.getAttribute('data-lazy-src');
         }
+        
+        if (poster && !poster.startsWith('http')) {
+            poster = (poster.startsWith('//') ? 'https:' : '') + poster;
+        }
+
+        let detectedType = type;
+        if (href.includes("/movies/")) {
+            detectedType = "movie";
+        } else if (href.includes("/series/") || href.includes("/series/")) {
+            detectedType = "series";
+        }
 
         return new MultimediaItem({
             title: title,
             url: JSON.stringify({ url: href, poster: poster }),
             posterUrl: poster,
-            type: type === "movie" ? "movie" : "series"
+            type: detectedType
         });
     }
 
@@ -94,6 +105,9 @@
             let poster = img?.getAttribute('src') || img?.getAttribute('data-src') || img?.getAttribute('data-lazy-src') || media.poster;
             if (poster?.startsWith('data:image')) {
                  poster = img?.getAttribute('data-src') || img?.getAttribute('data-lazy-src') || media.poster;
+            }
+            if (poster && !poster.startsWith('http')) {
+                poster = (poster.startsWith('//') ? 'https:' : '') + poster;
             }
             const plot = doc.querySelector('#overview-text p')?.textContent?.trim() || "";
             const yearText = Array.from(doc.querySelectorAll('div')).find(el => el.textContent.trim().match(/^\d{4}$/))?.textContent?.trim();
