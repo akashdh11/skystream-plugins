@@ -29,9 +29,9 @@
                         new MultimediaItem({ 
                             title: "Example Movie (Carousel)", 
                             url: `${manifest.baseUrl}/movie`, 
-                            posterUrl: `https://placehold.co/400x600?text=Trending+Poster`, 
+                            posterUrl: `https://placehold.co/400x600.png?text=Trending+Poster`, 
                             type: "movie",
-                            bannerUrl: `https://placehold.co/1280x720?text=Trending+Banner`, 
+                            bannerUrl: `https://placehold.co/1280x720.png?text=Trending+Banner`, 
                             description: "This item appears in the top carousel because it's in 'Trending'.",
                             headers: { "Referer": `${manifest.baseUrl}` } 
                         })
@@ -40,7 +40,7 @@
                         new MultimediaItem({ 
                             title: "Featured Item (Thumbnail)", 
                             url: `${manifest.baseUrl}/featured`, 
-                            posterUrl: `https://placehold.co/400x600?text=Thumbnail+Poster`, 
+                            posterUrl: `https://placehold.co/400x600.png?text=Thumbnail+Poster`, 
                             type: "movie",
                             description: "This item appears in a thumbnail row.",
                             headers: { "Referer": `${manifest.baseUrl}` } 
