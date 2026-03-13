@@ -49,23 +49,7 @@
                             url: `${manifest.baseUrl}/series`, 
                             posterUrl: `https://placehold.co/400x600.png?text=Series+Poster`, 
                             type: "series",
-                            year: 2024,
-                            score: 8.5,
-                            status: "ongoing", // ongoing, completed, upcoming
-                            description: "This category appears as a thumbnail row.",
-                            cast: [
-                                new Actor({ name: "John Doe", role: "Protagonist", image: "https://..." })
-                            ],
-                            episodes: [
-                                new Episode({
-                                    name: "Episode 1",
-                                    url: `${manifest.baseUrl}/series/1`,
-                                    season: 1,
-                                    episode: 1,
-                                    airDate: "2024-03-12",
-                                    dubStatus: "subbed" // subbed, dubbed, none
-                                })
-                            ]
+                            description: "This category appears as a thumbnail row."
                         })
                     ]
                 } 
@@ -130,6 +114,24 @@
                     type: "series", 
                     bannerUrl: `https://placehold.co/1280x720.png?text=Series+Banner`,
                     description: "This is a detailed description of the media.", 
+                    year: 2024,
+                    score: 8.5,
+                    duration: 120, // (optional, in minutes)
+                    status: "ongoing", // ongoing, completed, upcoming
+                    contentRating: "PG-13",
+                    logoUrl: `https://placehold.co/200x100.png?text=Logo`,
+                    isAdult: false,
+                    tags: ["Action", "Adventure"],
+                    cast: [
+                        new Actor({ name: "John Doe", role: "Protagonist", image: "https://placehold.co/200x300.png" })
+                    ],
+                    trailers: [
+                        new Trailer({ name: "Official Trailer", url: "https://www.youtube.com/watch?v=..." })
+                    ],
+                    nextAiring: new NextAiring({ episode: 5, season: 1, airDate: "2024-04-01" }),
+                    recommendations: [
+                        new MultimediaItem({ title: "Similar Show", url: `${manifest.baseUrl}/similar`, posterUrl: "...", type: "series" })
+                    ],
                     headers: { "Referer": `${manifest.baseUrl}` }, 
                     episodes: [
                         new Episode({ 
