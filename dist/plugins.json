@@ -1,22 +1,5 @@
 [
   {
-    "packageName": "dev.akash.stars.anichi",
-    "name": "Anichi",
-    "version": 1,
-    "baseUrl": "https://example.com",
-    "description": "Anichi plugin for skystream-plugins",
-    "authors": [
-      "Developer"
-    ],
-    "languages": [
-      "en"
-    ],
-    "categories": [
-      "Others"
-    ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.anichi.sky"
-  },
-  {
     "packageName": "dev.akash.stars.animedekho",
     "name": "Anime Dekho",
     "version": 1,
