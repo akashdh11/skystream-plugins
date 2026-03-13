@@ -10,7 +10,8 @@
         "app-version": "android_c-247",
         "from-app": "allmanga",
         "platformstr": "android_c",
-        "Referer": "https://allmanga.to"
+        "Referer": "https://allmanga.to",
+        "Content-Type": "application/json"
     };
 
     const HASHES = {
@@ -52,12 +53,16 @@
     }
 
     function toMultimediaItem(edge) {
-        const posterUrl = edge.thumbnail?.startsWith("http") 
-            ? edge.thumbnail 
-            : `https://wp.youtube-anime.com/aln.youtube-anime.com/${edge.thumbnail}`;
+        if (!edge) return null;
+        const thumbnail = edge.thumbnail || edge.anyCard?.thumbnail || "";
+        const posterUrl = thumbnail.startsWith("http") 
+            ? thumbnail 
+            : thumbnail ? `https://wp.youtube-anime.com/aln.youtube-anime.com/${thumbnail}` : "";
+
+        const name = edge.name || edge.englishName || edge.nativeName || edge.anyCard?.name || "Unknown";
 
         return new MultimediaItem({
-            title: edge.name || edge.englishName || edge.nativeName || "Unknown",
+            title: name,
             url: edge._id, // Store ID as URL
             posterUrl: posterUrl,
             type: edge.type?.toLowerCase().includes("movie") ? "movie" : "anime",
@@ -88,15 +93,23 @@
 
             // Fetch standard categories
             for (const [name, variables] of Object.entries(categories)) {
-                const res = await queryGraph({ ...variables, limit: 26, page: 1 }, HASHES.mainPage);
-                const items = res.data?.shows?.edges?.map(toMultimediaItem) || [];
-                if (items.length > 0) homeData[name] = items;
+                try {
+                    const res = await queryGraph({ ...variables, limit: 26, page: 1 }, HASHES.mainPage);
+                    const items = res.data?.shows?.edges?.map(toMultimediaItem).filter(i => i) || [];
+                    if (items.length > 0) homeData[name] = items;
+                } catch (err) {
+                    console.error(`Failed to load category ${name}: ${err.message}`);
+                }
             }
 
             // Fetch Popular (different hash and structure)
-            const popularRes = await queryGraph({ type: "anime", size: 30, dateRange: 1, page: 1, allowAdult: true, allowUnknown: false }, HASHES.popular);
-            const popularItems = popularRes.data?.queryPopular?.recommendations?.map(r => toMultimediaItem(r.anyCard)) || [];
-            if (popularItems.length > 0) homeData["Trending"] = popularItems; // Promoted to Hero
+            try {
+                const popularRes = await queryGraph({ type: "anime", size: 30, dateRange: 1, page: 1, allowAdult: true, allowUnknown: false }, HASHES.popular);
+                const popularItems = popularRes.data?.queryPopular?.recommendations?.map(r => toMultimediaItem(r))?.filter(i => i) || [];
+                if (popularItems.length > 0) homeData["Trending"] = popularItems;
+            } catch (err) {
+                console.error(`Failed to load Trending: ${err.message}`);
+            }
 
             cb({ success: true, data: homeData });
         } catch (e) {
