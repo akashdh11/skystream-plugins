@@ -1,0 +1,16 @@
+{
+  "packageName": "dev.akash.stars.yflix",
+  "name": "YFlix",
+  "version": 1,
+  "baseUrl": "https://example.com",
+  "description": "YFlix plugin for skystream-plugins",
+  "authors": [
+    "Developer"
+  ],
+  "languages": [
+    "en"
+  ],
+  "categories": [
+    "Others"
+  ]
+}

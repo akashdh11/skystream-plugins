@@ -1,0 +1,16 @@
+{
+  "packageName": "dev.akash.stars.zee5",
+  "name": "Zee 5",
+  "version": 1,
+  "baseUrl": "https://example.com",
+  "description": "Zee 5 plugin for skystream-plugins",
+  "authors": [
+    "Developer"
+  ],
+  "languages": [
+    "en"
+  ],
+  "categories": [
+    "Others"
+  ]
+}

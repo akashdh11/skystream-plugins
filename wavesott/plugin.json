@@ -1,0 +1,16 @@
+{
+  "packageName": "dev.akash.stars.wavesott",
+  "name": "Waves OTT",
+  "version": 1,
+  "baseUrl": "https://example.com",
+  "description": "Waves OTT plugin for skystream-plugins",
+  "authors": [
+    "Developer"
+  ],
+  "languages": [
+    "en"
+  ],
+  "categories": [
+    "Others"
+  ]
+}

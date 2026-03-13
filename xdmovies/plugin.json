@@ -1,0 +1,16 @@
+{
+  "packageName": "dev.akash.stars.xdmovies",
+  "name": "XD Movies",
+  "version": 1,
+  "baseUrl": "https://example.com",
+  "description": "XD Movies plugin for skystream-plugins",
+  "authors": [
+    "Developer"
+  ],
+  "languages": [
+    "en"
+  ],
+  "categories": [
+    "Others"
+  ]
+}

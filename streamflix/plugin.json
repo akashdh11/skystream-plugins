@@ -1,0 +1,10 @@
+{
+  "packageName": "dev.akash.stars.streamflix",
+  "name": "StreamFlix 2.0",
+  "version": 4,
+  "baseUrl": "https://api.streamflix.app",
+  "description": "StreamFlix Provider",
+  "authors": ["Akash"],
+  "languages": ["ta"],
+  "categories": ["Movie", "TvSeries"]
+}

@@ -1,0 +1,16 @@
+{
+  "packageName": "dev.akash.stars.yupptv",
+  "name": "YUPP TV",
+  "version": 1,
+  "baseUrl": "https://example.com",
+  "description": "YUPP TV plugin for skystream-plugins",
+  "authors": [
+    "Developer"
+  ],
+  "languages": [
+    "en"
+  ],
+  "categories": [
+    "Others"
+  ]
+}

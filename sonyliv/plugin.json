@@ -1,0 +1,10 @@
+{
+  "packageName": "dev.cncverse.sonyliv",
+  "name": "SonyLIV",
+  "version": 3,
+  "baseUrl": "https://raw.githubusercontent.com/doctor-8trange/zyphora/refs/heads/main/data/sony.m3u",
+  "description": "SonyLIV Live Channels",
+  "authors": ["Akash"],
+  "languages": ["en"],
+  "categories": ["LiveTv"]
+}
