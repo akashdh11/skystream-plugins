@@ -227,5 +227,159 @@
       "TvSeries"
     ],
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.ringz.sky"
+  },
+  {
+    "packageName": "dev.cncverse.roarzone",
+    "name": "Roar Zone",
+    "version": 3,
+    "baseUrl": "https://gist.githubusercontent.com/doctor-8trange/853accdac0fa96e8421514000fc873ee/raw/wanda.m3u",
+    "description": "Roar Zone Live Channels",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "en"
+    ],
+    "categories": [
+      "LiveTv"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.cncverse.roarzone.sky"
+  },
+  {
+    "packageName": "dev.cncverse.sonyliv",
+    "name": "SonyLIV",
+    "version": 3,
+    "baseUrl": "https://raw.githubusercontent.com/doctor-8trange/zyphora/refs/heads/main/data/sony.m3u",
+    "description": "SonyLIV Live Channels",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "en"
+    ],
+    "categories": [
+      "LiveTv"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.cncverse.sonyliv.sky"
+  },
+  {
+    "packageName": "dev.akash.stars.streamflix",
+    "name": "StreamFlix 2.0",
+    "version": 4,
+    "baseUrl": "https://api.streamflix.app",
+    "description": "StreamFlix Provider",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "ta"
+    ],
+    "categories": [
+      "Movie",
+      "TvSeries"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.streamflix.sky"
+  },
+  {
+    "packageName": "dev.cncverse.sunnxt",
+    "name": "SUN NXT",
+    "version": 3,
+    "baseUrl": "https://raw.githubusercontent.com/alexandermail371/cricfytv/refs/heads/main/sunxt.m3u",
+    "description": "SUN NXT Live TV",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "en"
+    ],
+    "categories": [
+      "LiveTv"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.cncverse.sunnxt.sky"
+  },
+  {
+    "packageName": "dev.akash.stars.wavesott",
+    "name": "Waves OTT",
+    "version": 1,
+    "baseUrl": "https://example.com",
+    "description": "Waves OTT plugin for skystream-plugins",
+    "authors": [
+      "Developer"
+    ],
+    "languages": [
+      "en"
+    ],
+    "categories": [
+      "Others"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.wavesott.sky"
+  },
+  {
+    "packageName": "dev.akash.stars.xdmovies",
+    "name": "XD Movies",
+    "version": 1,
+    "baseUrl": "https://example.com",
+    "description": "XD Movies plugin for skystream-plugins",
+    "authors": [
+      "Developer"
+    ],
+    "languages": [
+      "en"
+    ],
+    "categories": [
+      "Others"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.xdmovies.sky"
+  },
+  {
+    "packageName": "dev.akash.stars.yflix",
+    "name": "YFlix",
+    "version": 1,
+    "baseUrl": "https://example.com",
+    "description": "YFlix plugin for skystream-plugins",
+    "authors": [
+      "Developer"
+    ],
+    "languages": [
+      "en"
+    ],
+    "categories": [
+      "Others"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.yflix.sky"
+  },
+  {
+    "packageName": "dev.akash.stars.yupptv",
+    "name": "YUPP TV",
+    "version": 1,
+    "baseUrl": "https://example.com",
+    "description": "YUPP TV plugin for skystream-plugins",
+    "authors": [
+      "Developer"
+    ],
+    "languages": [
+      "en"
+    ],
+    "categories": [
+      "Others"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.yupptv.sky"
+  },
+  {
+    "packageName": "dev.akash.stars.zee5",
+    "name": "Zee 5",
+    "version": 1,
+    "baseUrl": "https://example.com",
+    "description": "Zee 5 plugin for skystream-plugins",
+    "authors": [
+      "Developer"
+    ],
+    "languages": [
+      "en"
+    ],
+    "categories": [
+      "Others"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.zee5.sky"
   }
 ]
