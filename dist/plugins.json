@@ -1,22 +1,5 @@
 [
   {
-    "packageName": "dev.akash.stars.yts",
-    "name": "YTS",
-    "version": 1,
-    "baseUrl": "https://yts.bz",
-    "description": "YTS Provider",
-    "authors": [
-      "Akash"
-    ],
-    "languages": [
-      "en"
-    ],
-    "categories": [
-      "Movie"
-    ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.yts.sky"
-  },
-  {
     "packageName": "dev.akash.stars.ayna2",
     "name": "AYNA 2",
     "version": 1,
@@ -32,5 +15,22 @@
       "Others"
     ],
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.ayna2.sky"
+  },
+  {
+    "packageName": "dev.akash.stars.yts",
+    "name": "YTS",
+    "version": 1,
+    "baseUrl": "https://yts.bz",
+    "description": "YTS Provider",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "en"
+    ],
+    "categories": [
+      "Movie"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.yts.sky"
   }
 ]
