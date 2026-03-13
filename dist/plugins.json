@@ -36,13 +36,13 @@
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.bdixtv.sky"
   },
   {
-    "packageName": "dev.cncverse.darktv",
+    "packageName": "dev.akash.stars.darktv",
     "name": "DARK TV",
     "version": 1,
     "baseUrl": "https://ranapk.online",
     "description": "DARK TV Live Channels (v2 Standard)",
     "authors": [
-      "CNCVerse"
+      "Akash"
     ],
     "languages": [
       "en"
@@ -51,7 +51,7 @@
       "LiveTv",
       "Others"
     ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.cncverse.darktv.sky"
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.darktv.sky"
   },
   {
     "packageName": "dev.akash.stars.yts",
