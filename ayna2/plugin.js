@@ -51,6 +51,13 @@
                                     season: 1, 
                                     episode: 1, 
                                     posterUrl: `https://placehold.co/400x600.png?text=EP1+Poster` 
+                                }),
+                                new Episode({ 
+                                    name: "The Encounter", 
+                                    url: `${manifest.baseUrl}/series/s1e2`, 
+                                    season: 1, 
+                                    episode: 2, 
+                                    posterUrl: `https://placehold.co/400x600.png?text=EP2+Poster` 
                                 })
                             ]
                         })
@@ -124,6 +131,15 @@
                             episode: 1, 
                             description: "The beginning of the journey.", 
                             posterUrl: `https://placehold.co/400x600.png?text=EP1+Poster`,
+                            headers: { "Referer": `${manifest.baseUrl}` } 
+                        }),
+                        new Episode({ 
+                            name: "The Encounter", 
+                            url: `${manifest.baseUrl}/watch/s1e2`, 
+                            season: 1, 
+                            episode: 2, 
+                            description: "Things get complicated.", 
+                            posterUrl: `https://placehold.co/400x600.png?text=EP2+Poster`,
                             headers: { "Referer": `${manifest.baseUrl}` } 
                         })
                     ]
