@@ -177,7 +177,14 @@
                         description: plot,
                         type: "movie",
                         year,
-                        tags
+                        tags,
+                        episodes: [
+                             new Episode({
+                                 name: title,
+                                 url: urlStr,
+                                 posterUrl: poster
+                             })
+                        ]
                     })
                 });
             }
