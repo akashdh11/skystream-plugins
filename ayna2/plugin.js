@@ -67,11 +67,11 @@
                         new MultimediaItem({ 
                             title: "Example Movie", 
                             url: `${manifest.baseUrl}/movie`, 
-                            posterUrl: `${manifest.baseUrl}/poster.jpg`, 
-                            type: "movie", // Valid types: movie, series, anime, livestream
-                            bannerUrl: `${manifest.baseUrl}/banner.jpg`, // (optional)
-                            description: "Plot summary here...", // (optional)
-                            headers: { "Referer": `${manifest.baseUrl}` } // (optional)
+                            posterUrl: `https://placehold.co/400x600.png?text=Search+Poster`, 
+                            type: "movie", 
+                            bannerUrl: `https://placehold.co/1280x720.png?text=Search+Banner`,
+                            description: "Plot summary here...", 
+                            headers: { "Referer": `${manifest.baseUrl}` } 
                         })
                 ] 
             });
@@ -93,20 +93,20 @@
                 data: new MultimediaItem({
                     title: "Example Movie Full Details",
                     url: url,
-                    posterUrl: `${manifest.baseUrl}/poster.jpg`,
-                    type: "movie", // Valid types: movie, series, anime, livestream
-                    bannerUrl: `${manifest.baseUrl}/banner.jpg`, // (optional)
-                    description: "This is a detailed description of the movie.", // (optional)
-                    headers: { "Referer": `${manifest.baseUrl}` }, // (optional)
+                    posterUrl: `https://placehold.co/400x600.png?text=Details+Poster`,
+                    type: "movie", 
+                    bannerUrl: `https://placehold.co/1280x720.png?text=Details+Banner`,
+                    description: "This is a detailed description of the movie.", 
+                    headers: { "Referer": `${manifest.baseUrl}` }, 
                     episodes: [
                         new Episode({ 
                             name: "Episode 1", 
                             url: `${manifest.baseUrl}/watch/1`, 
-                            season: 1, // (optional)
-                            episode: 1, // (optional)
-                            description: "Episode summary...", // (optional)
-                            posterUrl: `${manifest.baseUrl}/ep-poster.jpg`, // (optional)
-                            headers: { "Referer": `${manifest.baseUrl}` } // (optional)
+                            season: 1, 
+                            episode: 1, 
+                            description: "Episode summary...", 
+                            posterUrl: `https://placehold.co/400x600.png?text=Episode+Poster`,
+                            headers: { "Referer": `${manifest.baseUrl}` } 
                         })
                     ]
                 })
