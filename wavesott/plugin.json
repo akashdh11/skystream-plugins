@@ -1,16 +1,10 @@
 {
-  "packageName": "dev.akash.stars.wavesott",
-  "name": "Waves OTT",
-  "version": 1,
-  "baseUrl": "https://example.com",
-  "description": "Waves OTT plugin for skystream-plugins",
-  "authors": [
-    "Developer"
-  ],
-  "languages": [
-    "en"
-  ],
-  "categories": [
-    "Others"
-  ]
+  "packageName": "dev.cncverse.wavesott",
+  "name": "WAVES OTT",
+  "version": 3,
+  "baseUrl": "https://alex4528.site/playlist/waves.m3u",
+  "description": "WAVES OTT Live Channels",
+  "authors": ["Akash"],
+  "languages": ["en"],
+  "categories": ["LiveTv"]
 }

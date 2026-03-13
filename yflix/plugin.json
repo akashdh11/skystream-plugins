@@ -1,16 +1,10 @@
 {
   "packageName": "dev.akash.stars.yflix",
-  "name": "YFlix",
-  "version": 1,
-  "baseUrl": "https://example.com",
-  "description": "YFlix plugin for skystream-plugins",
-  "authors": [
-    "Developer"
-  ],
-  "languages": [
-    "en"
-  ],
-  "categories": [
-    "Others"
-  ]
+  "name": "Yflix",
+  "version": 3,
+  "baseUrl": "https://yflix.to",
+  "description": "Yflix Movie Provider",
+  "authors": ["Akash"],
+  "languages": ["en"],
+  "categories": ["Movie", "TvSeries"]
 }

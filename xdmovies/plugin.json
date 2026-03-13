@@ -1,16 +1,10 @@
 {
-  "packageName": "dev.akash.stars.xdmovies",
+  "packageName": "dev.akash.stars.xd",
   "name": "XD Movies",
-  "version": 1,
-  "baseUrl": "https://example.com",
-  "description": "XD Movies plugin for skystream-plugins",
-  "authors": [
-    "Developer"
-  ],
-  "languages": [
-    "en"
-  ],
-  "categories": [
-    "Others"
-  ]
+  "version": 4,
+  "baseUrl": "https://new.xdmovies.wtf",
+  "description": "Multi-source scraper for XD Movies",
+  "authors": ["Akash"],
+  "languages": ["en"],
+  "categories": ["Movie", "TvSeries"]
 }

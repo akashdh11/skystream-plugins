@@ -1,16 +1,10 @@
 {
-  "packageName": "dev.akash.stars.zee5",
-  "name": "Zee 5",
-  "version": 1,
-  "baseUrl": "https://example.com",
-  "description": "Zee 5 plugin for skystream-plugins",
-  "authors": [
-    "Developer"
-  ],
-  "languages": [
-    "en"
-  ],
-  "categories": [
-    "Others"
-  ]
+  "packageName": "dev.cncverse.zee5",
+  "name": "ZEE5 IN 2",
+  "version": 3,
+  "baseUrl": "https://alex4528.site/playlist/z5.m3u",
+  "description": "ZEE5 IN 2 Live Channels",
+  "authors": ["Akash"],
+  "languages": ["en"],
+  "categories": ["LiveTv"]
 }
