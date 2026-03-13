@@ -2,15 +2,16 @@
   "packageName": "dev.akash.stars.ayna2",
   "name": "AYNA 2",
   "version": 1,
-  "baseUrl": "https://example.com",
-  "description": "AYNA 2 plugin for skystream-plugins",
+  "baseUrl": "https://bdix.spidy.online/PLAYLIST/AYNA",
+  "description": "AYNA 2 Live Channels (v2 Standard)",
   "authors": [
-    "Developer"
+    "CNCVerse"
   ],
   "languages": [
     "en"
   ],
   "categories": [
+    "LiveTv",
     "Others"
   ]
 }
