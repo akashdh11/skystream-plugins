@@ -1,0 +1,16 @@
+{
+  "packageName": "dev.akash.stars.freetv",
+  "name": "Free TV",
+  "version": 1,
+  "baseUrl": "https://freetv.to",
+  "description": "Global Free Live TV with custom decryption",
+  "authors": [
+    "Akash"
+  ],
+  "languages": [
+    "en"
+  ],
+  "categories": [
+    "LiveTv"
+  ]
+}

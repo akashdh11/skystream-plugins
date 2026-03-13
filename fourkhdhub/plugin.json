@@ -1,0 +1,17 @@
+{
+  "packageName": "dev.akash.stars.4khd",
+  "name": "FourKHDHub",
+  "version": 1,
+  "baseUrl": "https://4khdhub.dad",
+  "description": "4K Movies and TV Shows (VOD)",
+  "authors": [
+    "Akash"
+  ],
+  "languages": [
+    "en"
+  ],
+  "categories": [
+    "Movie",
+    "TvSeries"
+  ]
+}
