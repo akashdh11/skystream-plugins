@@ -1,0 +1,16 @@
+{
+  "packageName": "dev.akash.stars.anichi",
+  "name": "Anichi",
+  "version": 1,
+  "baseUrl": "https://example.com",
+  "description": "Anichi plugin for skystream-plugins",
+  "authors": [
+    "Developer"
+  ],
+  "languages": [
+    "en"
+  ],
+  "categories": [
+    "Others"
+  ]
+}

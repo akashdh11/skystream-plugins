@@ -204,8 +204,9 @@
             const iframes = Array.from(doc.querySelectorAll('#options-0 iframe'));
 
             for (const iframe of iframes) {
-                const src = iframe.getAttribute('data-src');
+                let src = iframe.getAttribute('data-src');
                 if (src) {
+                    if (src.startsWith('//')) src = 'https:' + src;
                     await loadExtractor(src, streams);
                 }
             }
@@ -218,34 +219,54 @@
 
     async function loadExtractor(url, streams) {
         if (!url) return;
-        
-        const host = url.startsWith("http") ? new URL(url).hostname : "";
+        let host = "";
+        try { host = new URL(url).hostname; } catch(e) {}
         
         if (url.includes("z.awstream.net") || url.includes("as-cdn21.top") || url.includes("play.zephyrflick.top") || url.includes("beta.awstream.net")) {
             await extractAWSStream(url, streams);
         } else if (url.includes("megaplay.buzz") || url.includes("rapid-cloud.co")) {
             await extractMegaPlay(url, streams);
+        } else if (url.includes("ghbrisk.com") || url.includes("streamwish") || url.includes("filelions") || url.includes("pixdrive") || url.includes("vidmoly")) {
+            const name = url.includes("pixdrive") ? "Pixdrive" : (url.includes("vidmoly") ? "VidMoly" : "Streamwish");
+            await extractFilesim(url, streams, name);
         } else {
             // Basic fallback
             const name = host.replace("www.", "") || "Server";
-            streams.push(new StreamResult({ url: url, source: name }));
+            streams.push(new StreamResult({ 
+                url: url, 
+                source: name,
+                headers: {
+                    "Referer": manifest.baseUrl + "/"
+                }
+            }));
         }
     }
 
     async function extractAWSStream(url, streams) {
         try {
             const extractedHash = url.split('/').pop();
-            const baseUrl = new URL(url).origin;
+            const urlObj = new URL(url);
+            const baseUrl = urlObj.origin;
             const apiUrl = `${baseUrl}/player/index.php?data=${extractedHash}&do=getVideo`;
             const postData = `hash=${extractedHash}&r=${encodeURIComponent(baseUrl)}`;
             
-            const res = await http_post(apiUrl, { ...headers, "x-requested-with": "XMLHttpRequest", "Content-Type": "application/x-www-form-urlencoded" }, postData);
+            const res = await http_post(apiUrl, { 
+                ...headers, 
+                "x-requested-with": "XMLHttpRequest", 
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Referer": url
+            }, postData);
             const data = safeParse(res.body);
             
             if (data && data.videoSource) {
                 streams.push(new StreamResult({
                     url: data.videoSource,
-                    source: `AWSStream [1080p]`
+                    source: `AWSStream [1080p]`,
+                    headers: {
+                        "Referer": baseUrl + "/",
+                        "Origin": baseUrl,
+                        "User-Agent": headers["User-Agent"]
+                    }
                 }));
             }
         } catch (e) { console.error("AWSStream Error:", e); }
@@ -253,24 +274,51 @@
 
     async function extractMegaPlay(url, streams) {
         try {
-             // Implementation of MegaPlay extractor logic
-             const baseUrl = new URL(url).origin;
+             const urlObj = new URL(url);
+             const baseUrl = urlObj.origin;
              const res = await http_get(url, headers);
              const doc = new JSDOM(res.body).window.document;
              const id = doc.querySelector('#megaplay-player')?.getAttribute('data-id');
              
              if (id) {
                  const apiUrl = `${baseUrl}/stream/getSources?id=${id}&id=${id}`;
-                 const apiRes = await http_get(apiUrl, { ...headers, "X-Requested-With": "XMLHttpRequest" });
+                 const apiRes = await http_get(apiUrl, { ...headers, "X-Requested-With": "XMLHttpRequest", "Referer": url });
                  const data = safeParse(apiRes.body);
                  if (data && data.sources && data.sources.file) {
                      streams.push(new StreamResult({
                          url: data.sources.file,
-                         source: `MegaPlay [1080p]`
+                         source: `MegaPlay [1080p]`,
+                         headers: {
+                             "Referer": baseUrl + "/",
+                             "Origin": baseUrl,
+                             "User-Agent": headers["User-Agent"]
+                         }
                      }));
                  }
              }
         } catch (e) { console.error("MegaPlay Error:", e); }
+    }
+
+    async function extractFilesim(url, streams, serverName) {
+        try {
+            const res = await http_get(url, headers);
+            // Look for sources in the body or packed script
+            let content = res.body;
+            const sourceMatch = content.match(/sources:[\s\t]*\[([^\]]+)\]/);
+            if (sourceMatch) {
+                const fileMatch = sourceMatch[1].match(/file:[\s\t]*["']([^"']+)["']/);
+                if (fileMatch) {
+                    streams.push(new StreamResult({
+                        url: fileMatch[1],
+                        source: `${serverName} [720p]`,
+                        headers: {
+                            "Referer": url,
+                            "User-Agent": headers["User-Agent"]
+                        }
+                    }));
+                }
+            }
+        } catch (e) { console.error(`${serverName} Error:`, e); }
     }
 
     globalThis.getHome = getHome;
