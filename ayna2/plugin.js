@@ -84,7 +84,7 @@
                     const item = new MultimediaItem({
                         title: currentChannel.title,
                         url: JSON.stringify(currentChannel), // Store state in URL
-                        posterUrl: currentChannel.poster.endsWith(".png") || currentChannel.poster.endsWith(".jpg") ? currentChannel.poster : `${currentChannel.poster}.png`,
+                        posterUrl: currentChannel.poster,
                         type: "livestream",
                         description: `Live Stream from ${currentChannel.group}`,
                         headers: currentChannel.headers
