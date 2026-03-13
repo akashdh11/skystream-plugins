@@ -298,88 +298,90 @@
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.cncverse.sunnxt.sky"
   },
   {
-    "packageName": "dev.akash.stars.wavesott",
-    "name": "Waves OTT",
-    "version": 1,
-    "baseUrl": "https://example.com",
-    "description": "Waves OTT plugin for skystream-plugins",
+    "packageName": "dev.cncverse.wavesott",
+    "name": "WAVES OTT",
+    "version": 3,
+    "baseUrl": "https://alex4528.site/playlist/waves.m3u",
+    "description": "WAVES OTT Live Channels",
     "authors": [
-      "Developer"
+      "Akash"
     ],
     "languages": [
       "en"
     ],
     "categories": [
-      "Others"
+      "LiveTv"
     ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.wavesott.sky"
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.cncverse.wavesott.sky"
   },
   {
-    "packageName": "dev.akash.stars.xdmovies",
+    "packageName": "dev.akash.stars.xd",
     "name": "XD Movies",
-    "version": 1,
-    "baseUrl": "https://example.com",
-    "description": "XD Movies plugin for skystream-plugins",
+    "version": 4,
+    "baseUrl": "https://new.xdmovies.wtf",
+    "description": "Multi-source scraper for XD Movies",
     "authors": [
-      "Developer"
+      "Akash"
     ],
     "languages": [
       "en"
     ],
     "categories": [
-      "Others"
+      "Movie",
+      "TvSeries"
     ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.xdmovies.sky"
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.xd.sky"
   },
   {
     "packageName": "dev.akash.stars.yflix",
-    "name": "YFlix",
-    "version": 1,
-    "baseUrl": "https://example.com",
-    "description": "YFlix plugin for skystream-plugins",
+    "name": "Yflix",
+    "version": 3,
+    "baseUrl": "https://yflix.to",
+    "description": "Yflix Movie Provider",
     "authors": [
-      "Developer"
+      "Akash"
     ],
     "languages": [
       "en"
     ],
     "categories": [
-      "Others"
+      "Movie",
+      "TvSeries"
     ],
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.yflix.sky"
   },
   {
-    "packageName": "dev.akash.stars.yupptv",
-    "name": "YUPP TV",
-    "version": 1,
-    "baseUrl": "https://example.com",
-    "description": "YUPP TV plugin for skystream-plugins",
+    "packageName": "dev.cncverse.yupptv",
+    "name": "YUPPTV",
+    "version": 3,
+    "baseUrl": "https://tv.noobon.top/playlist/yapp.php",
+    "description": "Yupp TV Channels",
     "authors": [
-      "Developer"
+      "Akash"
     ],
     "languages": [
       "en"
     ],
     "categories": [
-      "Others"
+      "LiveTv"
     ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.yupptv.sky"
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.cncverse.yupptv.sky"
   },
   {
-    "packageName": "dev.akash.stars.zee5",
-    "name": "Zee 5",
-    "version": 1,
-    "baseUrl": "https://example.com",
-    "description": "Zee 5 plugin for skystream-plugins",
+    "packageName": "dev.cncverse.zee5",
+    "name": "ZEE5 IN 2",
+    "version": 3,
+    "baseUrl": "https://alex4528.site/playlist/z5.m3u",
+    "description": "ZEE5 IN 2 Live Channels",
     "authors": [
-      "Developer"
+      "Akash"
     ],
     "languages": [
       "en"
     ],
     "categories": [
-      "Others"
+      "LiveTv"
     ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.zee5.sky"
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.cncverse.zee5.sky"
   }
 ]
