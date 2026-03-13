@@ -134,10 +134,49 @@
         return "Auto";
     }
 
+    function base64Decode(str) {
+        try {
+            return Buffer.from(str, 'base64').toString('utf8');
+        } catch { return ""; }
+    }
+
+    function pen(v) {
+        if (!v) return "";
+        let out = "";
+        for (let i = 0; i < v.length; i++) {
+            const c = v[i];
+            if (c >= 'A' && c <= 'Z') out += String.fromCharCode(((c.charCodeAt(0) - 65 + 13) % 26) + 65);
+            else if (c >= 'a' && c <= 'z') out += String.fromCharCode(((c.charCodeAt(0) - 97 + 13) % 26) + 97);
+            else out += c;
+        }
+        return out;
+    }
+
     async function extractHubCloud(url, qual) {
-        const res = await http_get(url, CommonHeaders);
-        if (!res || !res.body) return [];
-        const doc = JsoupLite.parse(res.body);
+        try {
+            const headers = { ...CommonHeaders, "Cookie": "xla=s4t" };
+            const res = await http_get(url, headers);
+            if (!res || !res.body) return [];
+            
+            // Check if we're already on a page with download buttons (like gamerxyt)
+            if (url.includes("gamerxyt.com") || res.body.includes("Download Link Generated")) {
+                return extractFinalButtons(res.body, qual);
+            }
+
+            const doc = JsoupLite.parse(res.body);
+            const nextUrl = fixUrl(doc.find("#download")?.attr("href") || "");
+            if (nextUrl) {
+                const res2 = await http_get(nextUrl, { ...headers, "Referer": url });
+                if (res2 && res2.body) {
+                    return extractFinalButtons(res2.body, qual);
+                }
+            }
+        } catch {}
+        return [];
+    }
+
+    function extractFinalButtons(html, qual) {
+        const doc = JsoupLite.parse(html);
         const results = [];
         const links = doc.select("a");
         links.forEach(link => {
@@ -145,7 +184,7 @@
             const text = link.text().toLowerCase();
             const isBtn = (link.attr("class") || "").includes("btn");
             if (isBtn && (text.includes("fsl server") || text.includes("fslv2") || text.includes("download file") || text.includes("s3 server") || text.includes("mega server") || text.includes("10gbps"))) {
-                results.push({ url: href, name: "HubCloud", quality: qual });
+                results.push({ url: href, name: "HubCloud", quality: qual + " - " + link.text().trim() });
             } else if (text.includes("pixeldrain") || text.includes("pixel server")) {
                 const idMatch = /\/u\/([a-zA-Z0-9]+)/.exec(href);
                 if (idMatch) results.push({ url: `https://pixeldrain.com/api/file/${idMatch[1]}?download`, name: "PixelDrain", quality: qual });

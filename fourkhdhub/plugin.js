@@ -68,7 +68,7 @@
         constructor(html) {
             this.root = new JNode("root");
             let current = this.root;
-            const re = /<\/?[a-z0-9]+(?:\s+[a-z0-0-]+(?:=(?:"[^"]*"|'[^']*'|[^\s>]+))?)*\s*\/?>|[^<]+/gi;
+            const re = /<\/?[a-z0-0-]+(?:\s+[a-z0-9-]+(?:=(?:"[^"]*"|'[^']*'|[^\s>]+))?)*\s*\/?>|[^<]+/gi;
             let m;
             while ((m = re.exec(html))) {
                 const token = m[0];
@@ -191,12 +191,12 @@
             doc.select("meta").forEach(m => { if (m.attr("property") === "og:image") poster = fixUrl(m.attr("content")); });
             
             const description = doc.find(".movie-description")?.textContent()?.trim() || "";
-            const isSeries = url.includes("-series-");
+            const isSeries = url.includes("-series-") || doc.root.textContent().includes("Download Individual Episodes");
 
             if (!isSeries) {
                 const movieLinks = doc.select("a.btn")
-                    .map(a => ({ name: a.textContent()?.trim() || "Download", url: fixUrl(a.attr("href")) }))
-                    .filter(l => l.url && (l.url.includes("hubcloud") || l.url.includes("drive") || l.url.includes("gdrive")));
+                    .map(a => ({ name: a.find("span")?.textContent()?.trim() || a.textContent()?.trim() || "Download", url: fixUrl(a.attr("href")) }))
+                    .filter(l => l.url && (l.url.includes("gadgetsweb.xyz") || l.url.includes("hubcloud") || l.url.includes("drive")));
                 
                 cb({
                     success: true,
@@ -217,16 +217,41 @@
                 });
             } else {
                 const episodes = [];
-                doc.select("a").forEach(a => {
-                    const href = a.attr("href");
-                    if (href && (href.includes("episode") || href.includes("season"))) {
-                        episodes.push(new Episode({
+                // Handle new series layout with collapsible episodes
+                const epItems = doc.select(".episode-download-item");
+                if (epItems.length > 0) {
+                    epItems.forEach(item => {
+                        const epTitle = item.find(".episode-file-title")?.textContent()?.trim() || "Episode";
+                        const epNum = parseInt(item.find(".badge-psa")?.textContent()?.match(/Episode-(\d+)/i)?.[1]) || 1;
+                        const seasonNum = parseInt(item.parent?.parent?.find(".episode-number")?.textContent()?.match(/S(\d+)/i)?.[1]) || 1;
+                        const links = item.select("a.btn").map(a => ({
                             name: a.textContent().trim(),
-                            url: fixUrl(href),
-                            posterUrl: poster
-                        }));
-                    }
-                });
+                            url: fixUrl(a.attr("href"))
+                        })).filter(l => l.url && (l.url.includes("gadgetsweb.xyz") || l.url.includes("hubcloud") || l.url.includes("drive")));
+
+                        if (links.length > 0) {
+                            episodes.push(new Episode({
+                                name: epTitle,
+                                season: seasonNum,
+                                episode: epNum,
+                                url: JSON.stringify([{ name: epTitle, links }]),
+                                posterUrl: poster
+                            }));
+                        }
+                    });
+                } else {
+                    // Fallback to legacy link extraction
+                    doc.select("a").forEach(a => {
+                        const href = a.attr("href");
+                        if (href && (href.includes("episode") || href.includes("season"))) {
+                            episodes.push(new Episode({
+                                name: a.textContent().trim(),
+                                url: fixUrl(href),
+                                posterUrl: poster
+                            }));
+                        }
+                    });
+                }
                 
                 cb({ success: true, data: new MultimediaItem({ title, url, posterUrl: poster, description, type: "series", episodes }) });
             }
@@ -240,21 +265,133 @@
             let data;
             try { data = JSON.parse(dataStr); } catch { data = [{ links: [{ url: dataStr, name: "Auto" }] }]; }
             const results = [];
-            for (const item of data) {
-                if (item.links) {
-                    for (const link of item.links) {
+            const queue = [];
+            const seen = new Set();
+
+            data.forEach(item => {
+                if (!item || !item.links) return;
+                item.links.forEach(link => {
+                    if (link.url && !seen.has(link.url)) {
+                        seen.add(link.url);
+                        queue.push(link);
+                    }
+                });
+            });
+
+            if (queue.length === 0) return cb({ success: true, data: [] });
+
+            let processed = 0;
+            for (const link of queue) {
+                const processUrl = async (url, name) => {
+                    if (url.includes("gadgetsweb.xyz") || url.includes("id=")) {
+                        const resolved = await getRedirectLinks(url);
+                        if (resolved) await extractFinal(resolved, name);
+                    } else {
+                        await extractFinal(url, name);
+                    }
+                };
+
+                const extractFinal = async (url, name) => {
+                    if (url.includes("hubcloud") || url.includes("hubdrive")) {
+                        await extractHubCloud(url, (extracted) => {
+                            if (extracted) results.push(...extracted.map(e => new StreamResult({
+                                url: e.url,
+                                quality: e.quality,
+                                headers: CommonHeaders
+                            })));
+                        });
+                    } else {
                         results.push(new StreamResult({
-                            url: link.url,
-                            quality: link.name || "Auto",
+                            url: url,
+                            quality: name || "Auto",
                             headers: CommonHeaders
                         }));
                     }
-                }
+                };
+
+                await processUrl(link.url, link.name);
+                processed++;
+                if (processed === queue.length) cb({ success: true, data: results });
             }
-            cb({ success: true, data: results });
         } catch (e) {
             cb({ success: false, errorCode: "STREAM_ERROR", message: e.message });
         }
+    }
+
+    function base64Decode(str) {
+        try {
+            return Buffer.from(str, 'base64').toString('utf8');
+        } catch { return ""; }
+    }
+
+    function pen(v) {
+        if (!v) return "";
+        let out = "";
+        for (let i = 0; i < v.length; i++) {
+            const c = v[i];
+            if (c >= 'A' && c <= 'Z') out += String.fromCharCode(((c.charCodeAt(0) - 65 + 13) % 26) + 65);
+            else if (c >= 'a' && c <= 'z') out += String.fromCharCode(((c.charCodeAt(0) - 97 + 13) % 26) + 97);
+            else out += c;
+        }
+        return out;
+    }
+
+    async function getRedirectLinks(url) {
+        try {
+            const res = await http_get(url, CommonHeaders);
+            if (!res || !res.body) return "";
+            const html = res.body;
+            let combined = "";
+            const regex = /s\('o','([A-Za-z0-9+/=]+)'|ck\('_wp_http_\d+','([^']+)'/g;
+            let match;
+            while ((match = regex.exec(html)) !== null) combined += (match[1] || match[2]);
+            if (!combined) return "";
+            const rawDecoded = base64Decode(combined);
+            const pDecoded = pen(base64Decode(rawDecoded));
+            const decoded = JSON.parse(base64Decode(pDecoded));
+            if (decoded.o) return base64Decode(decoded.o).trim();
+            return "";
+        } catch { return ""; }
+    }
+
+    async function extractHubCloud(url, callback) {
+        try {
+            const headers = { ...CommonHeaders, "Cookie": "xla=s4t" };
+            const res = await http_get(url, headers);
+            if (!res || !res.body) return callback([]);
+            
+            const doc = new JsoupLite(res.body);
+            
+            // Check if we're already on a page with download buttons (like gamerxyt)
+            if (url.includes("gamerxyt.com") || res.body.includes("Download Link Generated")) {
+                return extractFinalButtons(res.body, callback);
+            }
+
+            const nextUrl = fixUrl(doc.find("#download")?.attr("href") || "");
+            if (nextUrl) {
+                const res2 = await http_get(nextUrl, { ...headers, "Referer": url });
+                if (res2 && res2.body) {
+                    return extractFinalButtons(res2.body, callback);
+                }
+            }
+            callback([]);
+        } catch { callback([]); }
+    }
+
+    function extractFinalButtons(html, callback) {
+        const doc = new JsoupLite(html);
+        const extracted = [];
+        const qMatch = html.match(/(\d{3,4})[pP]/);
+        const q = qMatch ? qMatch[1] + "p" : "HD";
+
+        doc.select("a.btn").forEach(el => {
+            const label = el.textContent().trim();
+            const link = el.attr("href");
+            if (link && (label.toLowerCase().includes("download") || el.attr("class").includes("btn-success"))) {
+                extracted.push({ url: link, quality: label.replace(/Download|\[|\]/gi, "").trim() || q });
+            }
+        });
+        callback(extracted);
     }
 
     // Export to global scope

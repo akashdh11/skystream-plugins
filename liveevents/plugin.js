@@ -10,10 +10,23 @@
         { key: "TXFlWUdDVDRBWUtvSEtyVA==", iv: "b0hLclRRdVB4OHpsOG9KKw==" }
     ];
 
+    const _b64chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+    function hexToB64(hex) {
+        let b = [];
+        for (let i = 0; i < hex.length; i += 2) b.push(parseInt(hex.substr(i, 2), 16));
+        let s = "";
+        for (let i = 0; i < b.length; i += 3) {
+            let b1 = b[i], b2 = i + 1 < b.length ? b[i + 1] : 0, b3 = i + 2 < b.length ? b[i + 2] : 0;
+            s += _b64chars[b1 >> 2] + _b64chars[((b1 & 3) << 4) | (b2 >> 4)] + (i + 1 < b.length ? _b64chars[((b2 & 15) << 2) | (b3 >> 6)] : "=") + (i + 2 < b.length ? _b64chars[b3 & 63] : "=");
+        }
+        return s;
+    }
+
     async function fetchAndDecrypt(url) {
+        const host = url.split("//")[1].split("/")[0];
         const res = await http_get(url, { 
             "User-Agent": "Dalvik/2.1.0 (Linux; U; Android 10; SM-A505F)",
-            "Host": "cfyjgfbnjjgv103.top" 
+            "Host": host 
         });
         if (!res || !res.body) return null;
         let body = res.body.trim();
@@ -167,11 +180,8 @@
                     
                     if (s.type === "7" && s.api && s.api.includes(":")) {
                         const [kid, key] = s.api.split(":");
-                        // Legacy uses a complex b64/atob/hex conversion, simplified assuming raw hex for clearkey
-                        // But we'll try to follow legacy logic if possible.
-                        // For ClearKey in Dash, we usually just need the Kid and Key in b64
-                        res.drmKid = btoa(kid).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-                        res.drmKey = btoa(key).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+                        res.drmKid = hexToB64(kid).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+                        res.drmKey = hexToB64(key).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
                         res.drmType = "clearkey";
                     }
                     results.push(res);
