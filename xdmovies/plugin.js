@@ -28,7 +28,7 @@
 
     async function extractPixelDrain(url) {
         const id = /\/u\/([a-zA-Z0-9]+)/.exec(url)?.[1];
-        return id ? [{ url: `https://pixeldrain.com/api/file/${id}?download`, name: "PixelDrain", quality: getQuality(url) }] : [];
+        return id ? [{ url: `https://pixeldrain.com/api/file/${id}?download`, name: "PixelDrain", source: getQuality(url) }] : [];
     }
 
     async function extractStreamTape(url, referer) {
@@ -36,14 +36,14 @@
         const res = await http_get(url, h);
         if (res.status !== 200) return [];
         const rob = /getElementById\('robotlink'\)\.innerHTML\s*=\s*'([^']+)'/.exec(res.body)?.[1];
-        return rob ? [{ url: rob.startsWith("//") ? "https:" + rob : rob, name: "StreamTape", quality: getQuality(url) }] : [];
+        return rob ? [{ url: rob.startsWith("//") ? "https:" + rob : rob, name: "StreamTape", source: getQuality(url) }] : [];
     }
 
     async function extractBuzzServer(url, referer) {
         const h = Object.assign({}, externalHeaders); if (referer) h.Referer = referer || url;
         const res = await http_get(url.endsWith("/") ? url + "download" : url + "/download", h);
         const l = res.headers?.["hx-redirect"] || res.headers?.["HX-Redirect"] || res.headers?.["location"];
-        return l ? [{ url: l, name: "BuzzServer", quality: getQuality(url) }] : [];
+        return l ? [{ url: l, name: "BuzzServer", source: getQuality(url) }] : [];
     }
 
     async function extractHubCloud(url, referer, originalQuality) {
@@ -56,11 +56,11 @@
         let m, ops = [], out = [];
         while ((m = bRegex.exec(html)) !== null) {
             const h = fixUrl(m[1].trim()), t = decodeHtml(m[2].replace(/<[^>]+>/g, "").trim()).toLowerCase();
-            if (t.includes("fsl server") || t.includes("fslv2")) out.push({ url: h, name: "FSL Server", quality: q });
-            else if (t.includes("download file")) out.push({ url: h, name: "HubCloud", quality: q });
-            else if (t.includes("s3 server")) out.push({ url: h, name: "S3 Server", quality: q });
-            else if (t.includes("mega server")) out.push({ url: h, name: "Mega Server", quality: q });
-            else if (t.includes("10gbps")) out.push({ url: h, name: "10Gbps Server", quality: q });
+            if (t.includes("fsl server") || t.includes("fslv2")) out.push({ url: h, name: "FSL Server", source: q });
+            else if (t.includes("download file")) out.push({ url: h, name: "HubCloud", source: q });
+            else if (t.includes("s3 server")) out.push({ url: h, name: "S3 Server", source: q });
+            else if (t.includes("mega server")) out.push({ url: h, name: "Mega Server", source: q });
+            else if (t.includes("10gbps")) out.push({ url: h, name: "10Gbps Server", source: q });
             else if (t.includes("pixeldra") || t.includes("pixelserver") || t.includes("pixel server")) ops.push(extractPixelDrain(h).then(l => out.push(...l)));
             else if (t.includes("buzzserver")) ops.push(extractBuzzServer(h, url).then(l => out.push(...l)));
             else if (t.includes("streamtape")) ops.push(extractStreamTape(h, url).then(l => out.push(...l)));
@@ -72,13 +72,13 @@
     async function resolveExtractor(url, quality) {
         if (!url) return [];
         if (url.includes("hubcloud") || url.includes("gamerxyt") || url.includes("hub.") || url.includes("fsl")) {
-            return (await extractHubCloud(url, "", quality)).map(r => new StreamResult({ name: "XD " + r.name, url: r.url, quality: r.quality || quality, headers: externalHeaders }));
+            return (await extractHubCloud(url, "", quality)).map(r => new StreamResult({ name: "XD " + r.name, url: r.url, source: r.quality || quality, headers: externalHeaders }));
         }
-        if (url.includes("pixeldrain")) return (await extractPixelDrain(url)).map(r => new StreamResult({ name: "XD " + r.name, url: r.url, quality: quality, headers: externalHeaders }));
-        if (url.includes("streamtape")) return (await extractStreamTape(url, "")).map(r => new StreamResult({ name: "XD " + r.name, url: r.url, quality: quality, headers: externalHeaders }));
-        if (url.includes("buzz")) return (await extractBuzzServer(url, "")).map(r => new StreamResult({ name: "XD " + r.name, url: r.url, quality: quality, headers: externalHeaders }));
-        if (url.includes("dood")) return [new StreamResult({ name: "DoodStream", url: url, quality: quality, headers: externalHeaders })];
-        if (url.includes("drive") || url.includes("gdrive")) return [new StreamResult({ name: "GDrive", url: url, quality: quality, headers: externalHeaders })];
+        if (url.includes("pixeldrain")) return (await extractPixelDrain(url)).map(r => new StreamResult({ name: "XD " + r.name, url: r.url, source: quality, headers: externalHeaders }));
+        if (url.includes("streamtape")) return (await extractStreamTape(url, "")).map(r => new StreamResult({ name: "XD " + r.name, url: r.url, source: quality, headers: externalHeaders }));
+        if (url.includes("buzz")) return (await extractBuzzServer(url, "")).map(r => new StreamResult({ name: "XD " + r.name, url: r.url, source: quality, headers: externalHeaders }));
+        if (url.includes("dood")) return [new StreamResult({ name: "DoodStream", url: url, source: quality, headers: externalHeaders })];
+        if (url.includes("drive") || url.includes("gdrive")) return [new StreamResult({ name: "GDrive", url: url, source: quality, headers: externalHeaders })];
         return [];
     }
 

@@ -162,7 +162,7 @@
                 list?.forEach(baseUrl => {
                     results.push(new StreamResult({ 
                         url: baseUrl + url, 
-                        quality: sub + " - " + q, 
+                        source: sub + " - " + q, 
                         headers: { 
                             "Referer": manifest.baseUrl, 
                             "User-Agent": HEADERS["User-Agent"] 

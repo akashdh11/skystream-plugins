@@ -156,11 +156,15 @@
             if (!media) throw new Error("Invalid URL data");
             const streams = [];
 
+            const mainRes = await http_get(media.url, headers);
+            const mainHtml = mainRes.body;
+            const doc = new JSDOM(mainHtml).window.document;
+
             // 1. VidStream / Toronites
             try {
                 const res = await http_get(media.url, { "Cookie": "toronites_server=vidstream", ...headers });
-                const doc = new JSDOM(res.body).window.document;
-                const iframes = Array.from(doc.querySelectorAll('iframe.serversel[src]'));
+                const torDoc = new JSDOM(res.body).window.document;
+                const iframes = Array.from(torDoc.querySelectorAll('iframe.serversel[src]'));
                 for (const iframe of iframes) {
                     const serverUrl = iframe.getAttribute('src');
                     if (serverUrl) {
@@ -172,25 +176,41 @@
                         }
                     }
                 }
-            } catch (e) {
-                console.error("VidStream Error:", e);
-            }
+            } catch (e) {}
 
-            // 2. Trakt / ID based discovery
+            // 2. ID-based Discovery (Try various servers)
             try {
-                const mainRes = await http_get(media.url, headers);
-                const bodyClass = new JSDOM(mainRes.body).window.document.body.className;
-                const termMatch = bodyClass.match(/(?:term|postid)-(\d+)/);
-                const term = termMatch ? termMatch[1] : null;
+                const bodyClass = doc.body.className;
+                let postId = bodyClass.match(/(?:term|postid)-(\d+)/)?.[1];
+                if (!postId) postId = mainHtml.match(/postid-(\d+)/)?.[1];
 
-                if (term) {
+                if (postId) {
+                    const encodedId = btoa(postId);
+                    const coreServers = ['vidstream', 'gdm', 'stream-v2', 'stream-v3', 'dood', 'file'];
+                    for (const srv of coreServers) {
+                        try {
+                            const pUrl = `${manifest.baseUrl}/player-v1/?id=${encodedId}&server=${srv}`;
+                            const pRes = await http_get(pUrl, { ...headers, "Referer": media.url });
+                            if (pRes.body && !pRes.body.includes("Page Not Found")) {
+                                const pDoc = new JSDOM(pRes.body).window.document;
+                                const iframe = pDoc.querySelector('iframe');
+                                if (iframe && iframe.getAttribute('src')) {
+                                    await loadExtractor(iframe.getAttribute('src'), streams);
+                                }
+                            }
+                        } catch (e) {}
+                    }
+                    
+                    // Legacy trid/trdekho discovery
                     for (let i = 0; i <= 10; i++) {
-                        const trUrl = `${manifest.baseUrl}/?trdekho=${i}&trid=${term}&trtype=${media.mediaType || 0}`;
-                        const trRes = await http_get(trUrl, headers);
-                        const trDoc = new JSDOM(trRes.body).window.document;
-                        const iframe = trDoc.querySelector('iframe');
-                        if (iframe && iframe.getAttribute('src')) {
-                            await loadExtractor(iframe.getAttribute('src'), streams);
+                        const trUrl = `${manifest.baseUrl}/?trdekho=${i}&trid=${postId}&trtype=${media.mediaType || 0}`;
+                        const trRes = await http_get(trUrl, { ...headers, "Referer": media.url });
+                        if (trRes.body) {
+                            const trDoc = new JSDOM(trRes.body).window.document;
+                            const iframe = trDoc.querySelector('iframe');
+                            if (iframe && iframe.getAttribute('src')) {
+                                await loadExtractor(iframe.getAttribute('src'), streams);
+                            }
                         }
                     }
                 }
@@ -198,7 +218,33 @@
                 console.error("ID-based Discovery Error:", e);
             }
 
-            cb({ success: true, data: streams });
+            // 3. YouTube / Vimeo / Direct Scrape (Alternative Sources)
+            try {
+                // Broad regex for any embeddable video links in scripts or body
+                const videoRegex = /https?:\/\/(?:www\.)?(?:youtube\.com\/embed\/|player\.vimeo\.com\/video\/|doodstream\.com\/e\/|filemoon\.sx\/e\/|vidmoly\.net\/embed-|emturbovid\.com\/t\/|short\.icu\/)[a-zA-Z0-9_-]+/g;
+                const vMatches = mainHtml.match(videoRegex);
+                if (vMatches) {
+                    for (const vUrl of vMatches) {
+                        await loadExtractor(vUrl, streams);
+                    }
+                }
+                
+                // Generic Iframe Scrape
+                const bodyIframes = Array.from(doc.querySelectorAll('iframe[src]'));
+                for (const ifr of bodyIframes) {
+                    await loadExtractor(ifr.getAttribute('src'), streams);
+                }
+            } catch (e) {}
+
+            // Deduplicate by URL
+            const seen = new Set();
+            const finalStreams = streams.filter(s => {
+                if (seen.has(s.url)) return false;
+                seen.add(s.url);
+                return true;
+            });
+
+            cb({ success: true, data: finalStreams });
         } catch (e) {
             cb({ success: false, errorCode: "STREAM_ERROR", message: e.message });
         }
@@ -207,6 +253,22 @@
     async function loadExtractor(url, streams) {
         if (!url) return;
         
+        const getDisplayName = (u) => {
+            if (u.includes("gdmirrorbot.nl") || u.includes("techinmind.space")) return "GDMirror";
+            if (u.includes("awstream.net") || u.includes("as-cdn21.top")) return "AWSStream";
+            if (u.includes("rubystm.com")) return "StreamRuby";
+            if (u.includes("blakiteapi.xyz")) return "Blakite";
+            if (u.includes("youtube.com")) return "YouTube";
+            if (u.includes("vimeo.com")) return "Vimeo";
+            if (u.includes("dood")) return "DoodStream";
+            if (u.includes("filemoon")) return "FileMoon";
+            if (u.includes("vidmoly")) return "VidMoly";
+            if (u.includes("emturbovid")) return "TurboVid";
+            try { return new URL(u).hostname.replace("www.", ""); } catch(e) { return "Server"; }
+        };
+
+        const serverName = getDisplayName(url);
+
         // Router for extractors
         if (url.includes("gdmirrorbot.nl") || url.includes("stream.techinmind.space")) {
             await extractGDMirror(url, streams);
@@ -220,7 +282,7 @@
             await extractBlakite(url, streams);
         } else {
             // Basic fallback for generic extractors
-            streams.push(new StreamResult({ url, quality: "Auto" }));
+            streams.push(new StreamResult({ url, source: serverName }));
         }
     }
 
@@ -259,7 +321,8 @@
                     for (const key in root.siteUrls) {
                         if (mresult[key]) {
                             const fullUrl = `${root.siteUrls[key].replace(/\/$/, "")}/${mresult[key].replace(/^\//, "")}`;
-                            streams.push(new StreamResult({ url: fullUrl, quality: root.siteFriendlyNames?.[key] || "Auto" }));
+                            const qual = root.siteFriendlyNames?.[key] || "Auto";
+                            streams.push(new StreamResult({ url: fullUrl, source: `GDMirror [${qual}]` }));
                         }
                     }
                 }
@@ -275,7 +338,7 @@
             const res = await http_post(apiUrl, { ...headers, "x-requested-with": "XMLHttpRequest" }, `hash=${hash}&r=${encodeURIComponent(url)}`);
             const data = safeParse(res.body);
             if (data && data.videoSource) {
-                streams.push(new StreamResult({ url: data.videoSource, quality: "1080p" }));
+                streams.push(new StreamResult({ url: data.videoSource, source: "AWSStream [1080p]" }));
             }
         } catch (e) { console.error("AWSStream Error:", e); }
     }
@@ -287,10 +350,10 @@
             const options = Array.from(doc.querySelectorAll('select#serverSelector option'));
             options.forEach(opt => {
                 const val = opt.getAttribute('value');
-                if (val) streams.push(new StreamResult({ url: val, quality: opt.textContent.trim() }));
+                if (val) streams.push(new StreamResult({ url: val, source: `Server [${opt.textContent.trim()}]` }));
             });
             const fileMatch = res.body.match(/file\s*:\s*"([^"]+)"/);
-            if (fileMatch) streams.push(new StreamResult({ url: fileMatch[1], quality: "Direct" }));
+            if (fileMatch) streams.push(new StreamResult({ url: fileMatch[1], source: "Direct [1080p]" }));
         } catch (e) { console.error("AnimedekhoCo Error:", e); }
     }
 
@@ -299,7 +362,7 @@
             const cleaned = url.replace("/e", "");
             const res = await http_get(cleaned, { ...headers, "X-Requested-With": "XMLHttpRequest" });
             const fileMatch = res.body.match(/file:\"(.*)\"/);
-            if (fileMatch) streams.push(new StreamResult({ url: fileMatch[1], quality: "1080p" }));
+            if (fileMatch) streams.push(new StreamResult({ url: fileMatch[1], source: "StreamRuby [1080p]" }));
         } catch (e) { console.error("StreamRuby Error:", e); }
     }
 
@@ -312,7 +375,8 @@
             const json = JSON.parse(res.body);
             if (json.success) {
                 const streamUrl = `https://blakiteapi.xyz/stream/${json.data.dataId}.${json.data.format}`;
-                streams.push(new StreamResult({ url: streamUrl, quality: json.data.quality || "Auto" }));
+                const qual = json.data.quality || "Auto";
+                streams.push(new StreamResult({ url: streamUrl, source: `Blakite [${qual}]` }));
             }
         } catch (e) { console.error("Blakite Error:", e); }
     }

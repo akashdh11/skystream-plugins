@@ -102,7 +102,7 @@
                 success: true,
                 data: [new StreamResult({
                     url: d.url,
-                    quality: "Auto",
+                    source: "Auto",
                     headers: d.headers || {}
                 })]
             });

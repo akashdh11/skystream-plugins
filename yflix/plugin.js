@@ -263,7 +263,7 @@
             const result = JSON.parse(postRes.body).result;
             if (result && result.sources && result.sources[0]) {
                 const m3u8 = typeof result.sources[0] === "string" ? result.sources[0] : result.sources[0].file;
-                if (m3u8) return [new StreamResult({ url: m3u8, quality: (referer || "MegaUp") + " 1080p", headers: { "Referer": manifest.baseUrl } })];
+                if (m3u8) return [new StreamResult({ url: m3u8, source: (referer || "MegaUp") + " 1080p", headers: { "Referer": manifest.baseUrl } })];
             }
         } catch {}
         return [];

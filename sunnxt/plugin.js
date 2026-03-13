@@ -106,7 +106,7 @@
             const c = JSON.parse(urlInfo);
             const stream = new StreamResult({ 
                 url: c.url, 
-                quality: "Auto", 
+                source: "Auto", 
                 headers: c.headers || {} 
             });
 

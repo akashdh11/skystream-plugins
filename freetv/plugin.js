@@ -138,7 +138,7 @@
                 success: true,
                 data: [new StreamResult({
                     url: channel.url,
-                    quality: "Auto",
+                    source: "Auto",
                     headers: channel.headers || {}
                 })]
             });

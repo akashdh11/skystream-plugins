@@ -125,7 +125,7 @@
                                         success: true,
                                         data: [new StreamResult({
                                             url: d.url,
-                                            quality: "Auto",
+                                            source: "Auto",
                                             headers: d.headers || {},
                                             drmKey: lData.keys[0].k,
                                             drmKid: kidB64,
@@ -140,7 +140,7 @@
                     }
                 }
             }
-            cb({ success: true, data: [new StreamResult({ url: d.url, quality: "Auto", headers: d.headers || {} })] });
+            cb({ success: true, data: [new StreamResult({ url: d.url, source: "Auto", headers: d.headers || {} })] });
         } catch (e) {
             cb({ success: false, errorCode: "STREAM_ERROR", message: e.message });
         }

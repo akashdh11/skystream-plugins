@@ -184,10 +184,10 @@
             const text = link.text().toLowerCase();
             const isBtn = (link.attr("class") || "").includes("btn");
             if (isBtn && (text.includes("fsl server") || text.includes("fslv2") || text.includes("download file") || text.includes("s3 server") || text.includes("mega server") || text.includes("10gbps"))) {
-                results.push({ url: href, name: "HubCloud", quality: qual + " - " + link.text().trim() });
+                results.push({ url: href, name: "HubCloud", source: qual + " - " + link.text().trim() });
             } else if (text.includes("pixeldrain") || text.includes("pixel server")) {
                 const idMatch = /\/u\/([a-zA-Z0-9]+)/.exec(href);
-                if (idMatch) results.push({ url: `https://pixeldrain.com/api/file/${idMatch[1]}?download`, name: "PixelDrain", quality: qual });
+                if (idMatch) results.push({ url: `https://pixeldrain.com/api/file/${idMatch[1]}?download`, name: "PixelDrain", source: qual });
             }
         });
         return results;
@@ -357,14 +357,14 @@
                                 }
                                 let linksArr = JSON.parse(ex.url);
                                 if (!Array.isArray(linksArr)) linksArr = [];
-                                linksArr.push({ source: href, quality: qual });
+                                linksArr.push({ source: href, source: qual });
                                 ex.url = JSON.stringify(linksArr);
                             } else {
                                 if (episodes.length === 0) {
                                     episodes.push(new Episode({ name: "Full Movie", season: 1, episode: 1, url: "[]", posterUrl: poster }));
                                 }
                                 let linksArr = JSON.parse(episodes[0].url);
-                                linksArr.push({ source: href, quality: qual });
+                                linksArr.push({ source: href, source: qual });
                                 episodes[0].url = JSON.stringify(linksArr);
                             }
                         }
@@ -406,14 +406,14 @@
                     links.forEach(l => {
                         results.push(new StreamResult({
                             url: l.url,
-                            quality: `${l.name} - ${l.quality}`,
+                            source: `${l.name} - ${l.quality}`,
                             headers: CommonHeaders
                         }));
                     });
                 } else {
                     results.push(new StreamResult({
                         url: u,
-                        quality: q,
+                        source: q,
                         headers: CommonHeaders
                     }));
                 }

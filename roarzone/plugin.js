@@ -118,7 +118,7 @@
             const d = JSON.parse(urlStr);
             const stream = new StreamResult({
                 url: d.url,
-                quality: "Auto",
+                source: "Auto",
                 headers: d.headers || {}
             });
 
@@ -145,7 +145,7 @@
             }
             cb({ success: true, data: [stream] });
         } catch {
-            cb({ success: true, data: [new StreamResult({ url: JSON.parse(urlStr).url, quality: "Auto" })] });
+            cb({ success: true, data: [new StreamResult({ url: JSON.parse(urlStr).url, source: "Auto" })] });
         }
     }
 

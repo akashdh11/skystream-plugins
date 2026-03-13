@@ -195,7 +195,7 @@
             const channel = JSON.parse(url);
             const stream = new StreamResult({
                 url: channel.url,
-                quality: "Auto",
+                source: "Auto",
                 headers: channel.headers || {}
             });
 

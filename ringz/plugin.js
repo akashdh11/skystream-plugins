@@ -186,7 +186,7 @@
                               qLabels.some(s => s.includes("480")) ? "480p" : "Auto";
                     
                     results.push(new StreamResult({
-                        quality: q,
+                        source: q,
                         url: u,
                         headers: commonHeaders
                     }));

@@ -121,9 +121,9 @@
                 const tm = tag.match(/title="([^"]*)"/), qt = (m[2].replace(/<[^>]+>/g, "").trim() || (tm ? tm[1] : "")).replace(/Download|Torrent|Magnet|Movie|YIFY/gi, "").trim();
                 let q = "Auto"; if (qt.includes("2160p")) q = "4K"; else if (qt.includes("1080p")) q = "1080p"; else if (qt.includes("720p")) q = "720p";
                 let mag = "magnet:?xt=urn:btih:" + hash + "&dn=" + hash; trList.forEach(t => mag += "&tr=" + encodeURIComponent(t.trim()));
-                links.push(new StreamResult({ url: mag, quality: qt || q, headers: {} }));
+                links.push(new StreamResult({ url: mag, source: qt || q, headers: {} }));
             }
-            if (!links.length) { const mRegex = /href="(magnet:\?xt=urn:btih:[^"]+)"/g; while ((m = mRegex.exec(html)) !== null) links.push(new StreamResult({ url: m[1], quality: "Magnet", headers: {} })); }
+            if (!links.length) { const mRegex = /href="(magnet:\?xt=urn:btih:[^"]+)"/g; while ((m = mRegex.exec(html)) !== null) links.push(new StreamResult({ url: m[1], source: "Magnet", headers: {} })); }
             cb({ success: true, data: links.sort((a,b) => b.quality.includes("1080p") ? 1 : -1) });
         } catch (e) { cb({ success: false, errorCode: "PARSE_ERROR", message: e.stack }); }
     }

@@ -173,7 +173,7 @@
                     }
                     
                     const res = new StreamResult({
-                        quality: s.title || `Server ${idx + 1}`,
+                        source: s.title || `Server ${idx + 1}`,
                         url: u,
                         headers: h
                     });

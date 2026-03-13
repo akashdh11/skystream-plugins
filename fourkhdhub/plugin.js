@@ -317,14 +317,14 @@
                         await extractHubCloud(url, (extracted) => {
                             if (extracted) results.push(...extracted.map(e => new StreamResult({
                                 url: e.url,
-                                quality: e.quality,
+                                source: e.quality,
                                 headers: CommonHeaders
                             })));
                         });
                     } else {
                         results.push(new StreamResult({
                             url: url,
-                            quality: name || "Auto",
+                            source: name || "Auto",
                             headers: CommonHeaders
                         }));
                     }
@@ -409,7 +409,7 @@
             const label = el.textContent().trim();
             const link = el.attr("href");
             if (link && (label.toLowerCase().includes("download") || el.attr("class").includes("btn-success"))) {
-                extracted.push({ url: link, quality: label.replace(/Download|\[|\]/gi, "").trim() || q });
+                extracted.push({ url: link, source: label.replace(/Download|\[|\]/gi, "").trim() || q });
             }
         });
         callback(extracted);

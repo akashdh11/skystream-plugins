@@ -196,7 +196,7 @@
                 data: [
                     new StreamResult({
                         url: channelData.url,
-                        quality: "Auto",
+                        source: "Auto",
                         headers: channelData.headers || {}
                     })
                 ]
