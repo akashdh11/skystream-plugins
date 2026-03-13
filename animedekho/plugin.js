@@ -15,7 +15,7 @@
         try { return JSON.parse(data); } catch (e) { return null; }
     }
 
-    function toMedia(element) {
+    function toMedia(element, type = "anime") {
         const lnk = element.querySelector('a.lnk-blk');
         if (!lnk) return null;
         const href = lnk.getAttribute('href');
@@ -30,28 +30,43 @@
             title: title,
             url: JSON.stringify({ url: href, poster: poster }),
             posterUrl: poster,
-            type: "anime"
+            type: type
         });
     }
 
     async function getHome(cb) {
         try {
             const categories = [
-                { path: "/series/", name: "Series" },
-                { path: "/movie/", name: "Movies" },
-                { path: "/category/anime/", name: "Anime" },
-                { path: "/category/cartoon/", name: "Cartoon" },
-                { path: "/category/crunchyroll/", name: "Crunchyroll" },
-                { path: "/category/hindi-dub/", name: "Hindi Dubbed" }
+                { path: "/serie/", name: "Series", type: "series" },
+                { path: "/movies/", name: "Movies", type: "movie" },
+                { path: "/category/anime/", name: "Anime", type: "anime" },
+                { path: "/category/cartoon/", name: "Cartoon", type: "anime" },
+                { path: "/category/crunchyroll/", name: "Crunchyroll", type: "anime" },
+                { path: "/category/hindi-dub/", name: "Hindi", type: "anime" },
+                { path: "/category/tamil/", name: "Tamil", type: "anime" },
+                { path: "/category/telugu/", name: "Telugu", type: "anime" }
             ];
 
             const result = {};
-            // For efficiency, we just fetch a few major ones for the initial home
-            for (const cat of categories.slice(0, 4)) {
-                const res = await http_get(`${manifest.baseUrl}${cat.path}`, headers);
-                const doc = new JSDOM(res.body).window.document;
-                const items = Array.from(doc.querySelectorAll('article')).map(toMedia).filter(Boolean);
-                if (items.length > 0) result[cat.name] = items;
+            for (const cat of categories) {
+                try {
+                    const res = await http_get(`${manifest.baseUrl}${cat.path}`, headers);
+                    const doc = new JSDOM(res.body).window.document;
+                    const container = doc.querySelector('.post-lst') || doc.querySelector('.items') || doc.querySelector('#main-content') || doc;
+                    const items = Array.from(container.querySelectorAll('article')).map(el => toMedia(el, cat.type)).filter(Boolean);
+                    
+                    // Deduplicate items within the same category
+                    const seen = new Set();
+                    const uniqueItems = items.filter(item => {
+                        if (seen.has(item.url)) return false;
+                        seen.add(item.url);
+                        return true;
+                    });
+
+                    if (uniqueItems.length > 0) result[cat.name] = uniqueItems;
+                } catch (e) {
+                    console.error(`Error fetching category ${cat.name}:`, e);
+                }
             }
 
             cb({ success: true, data: result });
