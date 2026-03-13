@@ -298,9 +298,9 @@
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.cncverse.sunnxt.sky"
   },
   {
-    "packageName": "dev.cncverse.wavesott",
+    "packageName": "dev.akash.stars.wavesott",
     "name": "WAVES OTT",
-    "version": 3,
+    "version": 1,
     "baseUrl": "https://alex4528.site/playlist/waves.m3u",
     "description": "WAVES OTT Live Channels",
     "authors": [
@@ -312,12 +312,12 @@
     "categories": [
       "LiveTv"
     ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.cncverse.wavesott.sky"
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.wavesott.sky"
   },
   {
-    "packageName": "dev.akash.stars.xd",
+    "packageName": "dev.akash.stars.xdmovies",
     "name": "XD Movies",
-    "version": 4,
+    "version": 1,
     "baseUrl": "https://new.xdmovies.wtf",
     "description": "Multi-source scraper for XD Movies",
     "authors": [
@@ -330,7 +330,7 @@
       "Movie",
       "TvSeries"
     ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.xd.sky"
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.xdmovies.sky"
   },
   {
     "packageName": "dev.akash.stars.yflix",
@@ -351,9 +351,9 @@
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.yflix.sky"
   },
   {
-    "packageName": "dev.cncverse.yupptv",
+    "packageName": "dev.akash.stars.yupptv",
     "name": "YUPPTV",
-    "version": 3,
+    "version": 1,
     "baseUrl": "https://tv.noobon.top/playlist/yapp.php",
     "description": "Yupp TV Channels",
     "authors": [
@@ -365,12 +365,12 @@
     "categories": [
       "LiveTv"
     ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.cncverse.yupptv.sky"
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.yupptv.sky"
   },
   {
-    "packageName": "dev.cncverse.zee5",
+    "packageName": "dev.akash.stars.zee5",
     "name": "ZEE5 IN 2",
-    "version": 3,
+    "version": 1,
     "baseUrl": "https://alex4528.site/playlist/z5.m3u",
     "description": "ZEE5 IN 2 Live Channels",
     "authors": [
@@ -382,6 +382,6 @@
     "categories": [
       "LiveTv"
     ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.cncverse.zee5.sky"
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.zee5.sky"
   }
 ]
