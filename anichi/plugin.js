@@ -41,8 +41,8 @@
         
         try {
             const res = await http_post(API_URL, HEADERS, JSON.stringify(body));
-            if (!res || res.trim().startsWith("<!DOCTYPE")) {
-               throw new Error("HTTP_BLOCK: Cloudflare or Network Error");
+            if (!res || res.trim().startsWith("<")) {
+               throw new Error("HTTP_BLOCK: Cloudflare or Network Error (HTML returned)");
             }
             return JSON.parse(res);
         } catch (e) {
