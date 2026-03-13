@@ -2,15 +2,15 @@
   "packageName": "dev.akash.stars.anichi",
   "name": "Anichi",
   "version": 1,
-  "baseUrl": "https://example.com",
-  "description": "Anichi plugin for skystream-plugins",
+  "baseUrl": "https://allmanga.to",
+  "description": "Anichi (AllAnime) plugin for SkyStream. GraphQL-powered anime provider.",
   "authors": [
-    "Developer"
+    "Akash"
   ],
   "languages": [
     "en"
   ],
   "categories": [
-    "Others"
+    "Anime"
   ]
 }
