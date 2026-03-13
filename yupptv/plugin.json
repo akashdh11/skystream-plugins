@@ -1,7 +1,7 @@
 {
-  "packageName": "dev.cncverse.yupptv",
+  "packageName": "dev.akash.stars.yupptv",
   "name": "YUPPTV",
-  "version": 3,
+  "version": 1,
   "baseUrl": "https://tv.noobon.top/playlist/yapp.php",
   "description": "Yupp TV Channels",
   "authors": ["Akash"],

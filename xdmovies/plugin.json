@@ -1,7 +1,7 @@
 {
-  "packageName": "dev.akash.stars.xd",
+  "packageName": "dev.akash.stars.xdmovies",
   "name": "XD Movies",
-  "version": 4,
+  "version": 1,
   "baseUrl": "https://new.xdmovies.wtf",
   "description": "Multi-source scraper for XD Movies",
   "authors": ["Akash"],

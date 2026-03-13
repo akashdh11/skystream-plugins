@@ -1,7 +1,7 @@
 {
-  "packageName": "dev.cncverse.wavesott",
+  "packageName": "dev.akash.stars.wavesott",
   "name": "WAVES OTT",
-  "version": 3,
+  "version": 1,
   "baseUrl": "https://alex4528.site/playlist/waves.m3u",
   "description": "WAVES OTT Live Channels",
   "authors": ["Akash"],
