@@ -12,176 +12,201 @@
      */
     // var manifest is injected at runtime
 
+    /**
+     * Helper to fetch the M3U playlist.
+     */
+    async function fetchM3U() {
+        const url = `${manifest.baseUrl}/playlist/bdixtv.php`;
+        const headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0",
+            "Accept": "*/*",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Connection": "keep-alive"
+        };
+        const response = await http_get(url, headers);
+        const status = response.status !== undefined ? response.status : response.statusCode;
+        if (status >= 200 && status < 300) {
+            return response.body.trim();
+        } else {
+            throw new Error(`HTTP Error ${status || 'No Response'} fetching BDIX TV M3U`);
+        }
+    }
+
+    /**
+     * Helper to parse M3U string into MultimediaItems organized by category.
+     */
+    function parseM3U(m3uString) {
+        const lines = m3uString.split('\n');
+        const categories = { "Other Channels": [] };
+        let currentChannel = null;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line.startsWith("#EXTINF:-1")) {
+                currentChannel = { 
+                    title: "Unknown Channel", 
+                    poster: "", 
+                    group: "Other Channels", 
+                    headers: {}, 
+                    kodiProps: {} 
+                };
+                
+                const logoMatch = line.match(/tvg-logo="([^"]*)"/);
+                if (logoMatch && logoMatch[1]) currentChannel.poster = logoMatch[1];
+                
+                const groupMatch = line.match(/group-title="([^"]*)"/);
+                if (groupMatch && groupMatch[1]) {
+                    currentChannel.group = groupMatch[1];
+                    if (!categories[currentChannel.group]) categories[currentChannel.group] = [];
+                }
+                
+                const splitName = line.split(",");
+                if (splitName.length > 1) currentChannel.title = splitName[splitName.length - 1].trim();
+            } else if (line.startsWith("#EXTVLCOPT:http-user-agent=")) {
+                if (currentChannel) currentChannel.headers["User-Agent"] = line.split("=")[1].trim();
+            } else if (line.startsWith("#KODIPROP:inputstream.adaptive.license_key=")) {
+                if (currentChannel) currentChannel.kodiProps.licenseUrl = line.split("=")[1].trim();
+            } else if (line.startsWith("http")) {
+                if (currentChannel) {
+                    if (line.includes("|")) {
+                        const parts = line.split("|");
+                        currentChannel.url = parts[0];
+                        const headersPart = parts[1];
+                        const headerPairs = headersPart.split("&");
+                        for (let j = 0; j < headerPairs.length; j++) {
+                            const kv = headerPairs[j].split("=");
+                            if (kv.length >= 2) currentChannel.headers[kv[0]] = kv.slice(1).join("=");
+                        }
+                    } else {
+                        currentChannel.url = line;
+                    }
+                    
+                    const item = new MultimediaItem({
+                        title: currentChannel.title,
+                        url: JSON.stringify(currentChannel),
+                        posterUrl: currentChannel.poster,
+                        type: "livestream",
+                        description: `Live Stream from ${currentChannel.group}`,
+                        headers: currentChannel.headers
+                    });
+
+                    // Ensure .png for placeholders
+                    if (!currentChannel.poster || currentChannel.poster.includes("placehold.co")) {
+                        item.posterUrl = `https://placehold.co/400x600.png?text=${encodeURIComponent(currentChannel.title)}`;
+                    }
+
+                    categories[currentChannel.group].push(item);
+                    currentChannel = null;
+                }
+            }
+        }
+        
+        const finalOutput = {};
+        for (const cat in categories) {
+            if (categories[cat].length > 0) {
+                finalOutput[cat] = categories[cat];
+            }
+        }
+        return finalOutput;
+    }
 
     /**
      * Loads the home screen categories.
-     * @param {(res: Response) => void} cb 
      */
     async function getHome(cb) {
         try {
-            // Dashboard Layout:
-            // - "Trending" is a reserved category promoted to the Hero Carousel.
-            // - Other categories appear as horizontal thumbnail rows.
-            // - If "Trending" is missing, the first category is used for the carousel.
-            cb({ 
-                success: true, 
-                data: { 
-                    "Trending": [
-                        new MultimediaItem({ 
-                            title: "Example Movie (Carousel)", 
-                            url: `${manifest.baseUrl}/movie`, 
-                            posterUrl: `https://placehold.co/400x600.png?text=Trending+Movie`, 
-                            type: "movie", // Valid types: movie, series, anime, livestream
-                            bannerUrl: `https://placehold.co/1280x720.png?text=Trending+Banner`, // (optional)
-                            description: "Plot summary here...", // (optional)
-                            headers: { "Referer": `${manifest.baseUrl}` } // (optional)
-                        })
-                    ],
-                    "Latest Series": [
-                        new MultimediaItem({ 
-                            title: "Example Series (Thumb)", 
-                            url: `${manifest.baseUrl}/series`, 
-                            posterUrl: `https://placehold.co/400x600.png?text=Series+Poster`, 
-                            type: "series", // Valid types: movie, series, anime, livestream
-                            description: "This category appears as a thumbnail row.", // (optional)
-                            headers: { "Referer": `${manifest.baseUrl}` }, // (optional)
-                            episodes: [
-                                new Episode({
-                                    name: "Episode 1",
-                                    url: `${manifest.baseUrl}/series/1`,
-                                    season: 1,
-                                    episode: 1,
-                                    posterUrl: `https://placehold.co/400x600.png?text=EP1+Poster`
-                                }),
-                                new Episode({
-                                    name: "Episode 2",
-                                    url: `${manifest.baseUrl}/series/2`,
-                                    season: 1,
-                                    episode: 2,
-                                    posterUrl: `https://placehold.co/400x600.png?text=EP2+Poster`
-                                })
-                            ]
-                        })
-                    ]
-                } 
-            });
+            const m3u = await fetchM3U();
+            const data = parseM3U(m3u);
+            cb({ success: true, data });
         } catch (e) {
-            cb({ success: false, errorCode: "PARSE_ERROR", message: e.stack });
+            cb({ success: false, errorCode: "SITE_OFFLINE", message: e.message || String(e) });
         }
     }
 
     /**
      * Searches for media items.
-     * @param {string} query
-     * @param {(res: Response) => void} cb 
      */
     async function search(query, cb) {
         try {
-            // Standard: Return a List of items
-            // Samples show both a movie and a series
-            cb({ 
-                success: true, 
-                data: [
-                        new MultimediaItem({ 
-                            title: "Example Movie (Search Result)", 
-                            url: `${manifest.baseUrl}/movie`, 
-                            posterUrl: `https://placehold.co/400x600.png?text=Search+Movie`, 
-                            type: "movie", 
-                            bannerUrl: `https://placehold.co/1280x720.png?text=Search+Banner`,
-                            description: "Plot summary here...", 
-                            headers: { "Referer": `${manifest.baseUrl}` } 
-                        }),
-                        new MultimediaItem({ 
-                            title: "Example Series (Search Result)", 
-                            url: `${manifest.baseUrl}/series`, 
-                            posterUrl: `https://placehold.co/400x600.png?text=Search+Series`, 
-                            type: "series", 
-                            description: "A series found in search.", 
-                            headers: { "Referer": `${manifest.baseUrl}` } 
-                        })
-                ] 
-            });
+            const m3u = await fetchM3U();
+            const categories = parseM3U(m3u);
+            const results = [];
+            const q = query.toLowerCase();
+            
+            for (const cat in categories) {
+                categories[cat].forEach(item => {
+                    if (item.title.toLowerCase().includes(q)) {
+                        results.push(item);
+                    }
+                });
+            }
+            cb({ success: true, data: results });
         } catch (e) {
-            cb({ success: false, errorCode: "SEARCH_ERROR", message: e.stack });
+            cb({ success: false, errorCode: "SITE_OFFLINE", message: e.message || String(e) });
         }
     }
 
     /**
      * Loads details for a specific media item.
-     * @param {string} url
-     * @param {(res: Response) => void} cb 
      */
     async function load(url, cb) {
         try {
-            // Standard: Return a single item with full metadata
-            // Sample shows a series with episodes
-            cb({ 
-                success: true, 
+            let channelData;
+            try {
+                channelData = JSON.parse(url);
+            } catch (e) {
+                channelData = { title: "Live Channel", url: url, poster: "", group: "IPTV" };
+            }
+
+            const poster = channelData.poster || `https://placehold.co/400x600.png?text=${encodeURIComponent(channelData.title)}`;
+
+            cb({
+                success: true,
                 data: new MultimediaItem({
-                    title: "Example Series Full Details",
+                    title: channelData.title,
                     url: url,
-                    posterUrl: `https://placehold.co/400x600.png?text=Series+Details`,
-                    type: "series", 
-                    bannerUrl: `https://placehold.co/1280x720.png?text=Series+Banner`,
-                    description: "This is a detailed description of the media.", 
-                    headers: { "Referer": `${manifest.baseUrl}` }, 
+                    posterUrl: poster,
+                    type: "livestream",
+                    description: `Live TV Channel - ${channelData.group}`,
+                    headers: channelData.headers || {},
                     episodes: [
                         new Episode({ 
-                            name: "Episode 1", 
-                            url: `${manifest.baseUrl}/watch/1`, 
+                            name: "Live", 
                             season: 1, 
                             episode: 1, 
-                            description: "Episode summary...", 
-                            posterUrl: `https://placehold.co/400x600.png?text=Episode+Poster`,
-                            headers: { "Referer": `${manifest.baseUrl}` } 
-                        }),
-                        new Episode({ 
-                            name: "Episode 2", 
-                            url: `${manifest.baseUrl}/watch/2`, 
-                            season: 1, 
-                            episode: 2, 
-                            description: "Next episode summary...", 
-                            posterUrl: `https://placehold.co/400x600.png?text=Episode+Poster`,
-                            headers: { "Referer": `${manifest.baseUrl}` } 
+                            url: url, 
+                            posterUrl: poster 
                         })
                     ]
                 })
             });
         } catch (e) {
-            cb({ success: false, errorCode: "LOAD_ERROR", message: e.stack });
+            cb({ success: false, errorCode: "PARSE_ERROR", message: e.message || String(e) });
         }
     }
 
     /**
      * Resolves streams for a specific media item or episode.
-     * @param {string} url
-     * @param {(res: Response) => void} cb 
      */
     async function loadStreams(url, cb) {
         try {
-            // Standard: Return a List of stream urls
-            cb({ 
-                success: true, 
+            const channelData = JSON.parse(url);
+            cb({
+                success: true,
                 data: [
-                    new StreamResult({ 
-                        url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", 
-                        quality: "1080p", // (optional)
-                        headers: { "Referer": `${manifest.baseUrl}` }, // (optional)
-                        subtitles: [
-                            { url: `${manifest.baseUrl}/sub.vtt`, label: "English", lang: "en" } // (optional)
-                        ],
-                        drmKid: "kid_value", // (optional)
-                        drmKey: "key_value", // (optional)
-                        licenseUrl: "https://license-server.com" // (optional)
+                    new StreamResult({
+                        url: channelData.url,
+                        quality: "Auto",
+                        headers: channelData.headers || {}
                     })
-                ] 
+                ]
             });
         } catch (e) {
-            cb({ success: false, errorCode: "STREAM_ERROR", message: (e instanceof Error) ? e.message : String(e) });
+            cb({ success: false, errorCode: "STREAM_ERROR", message: e.message || String(e) });
         }
     }
 
-    // Export to global scope for namespaced IIFE capture
+    // Export to global scope
     globalThis.getHome = getHome;
     globalThis.search = search;
     globalThis.load = load;
