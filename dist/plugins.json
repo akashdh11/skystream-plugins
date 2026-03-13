@@ -17,6 +17,23 @@
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.yts.sky"
   },
   {
+    "packageName": "dev.akash.stars.animedekho",
+    "name": "Anime Dekho",
+    "version": 1,
+    "baseUrl": "https://example.com",
+    "description": "Anime Dekho plugin for skystream-plugins",
+    "authors": [
+      "Developer"
+    ],
+    "languages": [
+      "en"
+    ],
+    "categories": [
+      "Others"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.animedekho.sky"
+  },
+  {
     "packageName": "dev.akash.stars.ayna2",
     "name": "AYNA 2",
     "version": 1,
