@@ -13,7 +13,7 @@
     }
 
     function parseM3uToCarousels(m3u) {
-        let lines = m3u.split('\n'), cats = { "Other Channels": [] }, cur = null;
+        let lines = m3u.split('\n'), cats = {}, cur = null;
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim();
             if (line.startsWith("#EXTINF:-1")) {
