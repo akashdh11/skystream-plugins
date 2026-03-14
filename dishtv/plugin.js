@@ -171,6 +171,7 @@
                     type: "livestream",
                     description: `Live TV Channel - ${channelData.group}`,
                     headers: channelData.headers || {},
+                    playbackPolicy: "Internal Player Only"
                     episodes: [
                         new Episode({ 
                             name: "Live", 
