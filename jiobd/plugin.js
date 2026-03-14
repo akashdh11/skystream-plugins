@@ -7,7 +7,12 @@
     const CommonHeaders = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0",
     "Accept": "*/*",
-    "Cache-Control": "no-cache, no-store"
+    "Cache-Control": "no-cache, no-store",
+    "sec-ch-ua": "\"Chromium\";v=\"91\", \" Not;A Brand\";v=\"99\"",
+    "sec-ch-ua-mobile": "?0",
+    "sec-fetch-user": "?1",
+    "sec-fetch-mode": "navigate",
+    "sec-fetch-dest": "video"
 };
 
     function parseM3U(m3u) {
