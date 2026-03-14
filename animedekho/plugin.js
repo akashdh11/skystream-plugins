@@ -51,7 +51,7 @@
             for (const cat of categories) {
                 try {
                     const res = await http_get(`${manifest.baseUrl}${cat.path}`, headers);
-                    const doc = new JSDOM(res.body).window.document;
+                    const doc = new JSDOM(res).window.document;
                     const container = doc.querySelector('.post-lst') || doc.querySelector('.items') || doc.querySelector('.grid-container') || doc.querySelector('#main-content') || doc;
                     const items = Array.from(container.querySelectorAll('article.post')).length > 0 
                         ? Array.from(container.querySelectorAll('article.post')) 
@@ -82,7 +82,7 @@
     async function search(query, cb) {
         try {
             const res = await http_get(`${manifest.baseUrl}/?s=${encodeURIComponent(query)}`, headers);
-            const doc = new JSDOM(res.body).window.document;
+            const doc = new JSDOM(res).window.document;
             const items = Array.from(doc.querySelectorAll('ul[data-results] li article')).map(toMedia).filter(Boolean);
             cb({ success: true, data: items });
         } catch (e) {
@@ -95,7 +95,7 @@
             const media = safeParse(urlStr);
             if (!media) throw new Error("Invalid URL data");
             const res = await http_get(media.url, headers);
-            const doc = new JSDOM(res.body).window.document;
+            const doc = new JSDOM(res).window.document;
 
             let title = doc.querySelector('h1.entry-title')?.textContent?.trim()?.replace("Watch Online ", "") || "";
             if (!title) {
