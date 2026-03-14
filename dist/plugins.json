@@ -342,6 +342,31 @@
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.sunnxt.sky"
   },
   {
+    "packageName": "dev.akash.stars.tamilmv",
+    "name": "TamilMV",
+    "version": 1,
+    "baseUrl": "https://www.1tamilmv.army",
+    "description": "TamilMV forum-based torrent plugin (Magnets/Torrents)",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "ta",
+      "ml",
+      "te",
+      "hi",
+      "en"
+    ],
+    "categories": [
+      "Tamil",
+      "Malayalam",
+      "Telugu",
+      "Hindi",
+      "English"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.tamilmv.sky"
+  },
+  {
     "packageName": "dev.akash.stars.wavesott",
     "name": "WAVES OTT",
     "version": 1,
