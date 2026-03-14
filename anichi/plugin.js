@@ -22,11 +22,6 @@
         showsMetadata: "9de1b73e302fa5e471990ed8229c9ad330b3f82a92a288743fb67309520a1996"
     };
 
-    // --- Settings ---
-    registerSettings([
-        { id: "translation_type", name: "Translation Type", type: "select", options: ["sub", "dub"], default: "sub" },
-        { id: "quality", name: "Preferred Quality", type: "select", options: ["1080p", "720p", "480p", "360p"], default: "1080p" }
-    ]);
 
     // --- Helpers ---
     async function queryGraph(variables, hash) {
