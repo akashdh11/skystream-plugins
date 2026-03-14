@@ -121,6 +121,28 @@
 
     const CommonHeaders = { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36" };
 
+    function unescapeHTML(str) {
+        if (!str) return "";
+        return str.replace(/&([^;]+);/g, (match, entity) => {
+            const entities = {
+                'amp': '&', 'lt': '<', 'gt': '>', 'quot': '"', 'apos': "'",
+                'nbsp': ' ', 'ndash': '–', 'mdash': '—', 'middot': '·',
+                'sdot': '⋅', 'bull': '•', 'hellip': '…', 'copy': '©', 'reg': '®'
+            };
+            if (entities[entity]) return entities[entity];
+            if (entity.startsWith('#')) {
+                const code = entity.startsWith('#x') ? parseInt(entity.slice(2), 16) : parseInt(entity.slice(1));
+                return isNaN(code) ? match : String.fromCharCode(code);
+            }
+            return match;
+        });
+    }
+
+    function stripHTML(html) {
+        if (!html) return "";
+        return unescapeHTML(html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim());
+    }
+
     function fixUrl(url) {
         if (!url) return "";
         if (url.startsWith("//")) return "https:" + url;
@@ -203,8 +225,19 @@
             let poster = null;
             doc.select("meta").forEach(m => { if (m.attr("property") === "og:image") poster = fixUrl(m.attr("content")); });
             
-            const description = doc.find(".movie-description")?.textContent()?.trim() || res.body.substring(0, 500);
-            const isSeries = url.includes("-series-") || doc.root.textContent().includes("Download Individual Episodes");
+            const descriptionEl = doc.find(".movie-description") || doc.select(".content-main p").find(p => p.textContent().length > 50);
+            let description = descriptionEl ? stripHTML(descriptionEl.textContent()) : "";
+            
+            if (!description || description.length < 10) {
+                doc.select("meta").forEach(m => { 
+                    if (m.attr("name") === "description" || m.attr("property") === "og:description") {
+                        const content = m.attr("content");
+                        if (content && content.length > description.length) description = unescapeHTML(content);
+                    }
+                });
+            }
+            
+            const isSeries = url.includes("-series-") || doc.root.textContent().includes("Download Individual Episodes") || !!doc.find(".episode-download-item");
 
             if (!isSeries) {
                 const linksRegex = /href="(https?:\/\/(?:gadgetsweb\.xyz|hubcloud|hubdrive|drive\.google\.com)[^"]+)"/gi;
@@ -317,7 +350,7 @@
                         await extractHubCloud(url, (extracted) => {
                             if (extracted) results.push(...extracted.map(e => new StreamResult({
                                 url: e.url,
-                                source: e.quality,
+                                source: e.source || "Auto",
                                 headers: CommonHeaders
                             })));
                         });

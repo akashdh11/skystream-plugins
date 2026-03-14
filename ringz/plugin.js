@@ -46,13 +46,11 @@
     async function getHome(cb) {
         try {
             const cats = await fetchCats();
-            const results = {};
             const valid = cats.filter(c => !(c.adult === true || c.title.includes("Adult")));
-            
             if (!valid.length) return cb({ success: true, data: {} });
 
-            let count = 0;
-            valid.forEach(async (c) => {
+            const results = {};
+            const promises = valid.map(async (c) => {
                 try {
                     const u = c.url.startsWith("http") ? c.url : `${manifest.baseUrl}/${c.url}`;
                     const res = await http_get(u, commonHeaders);
@@ -60,10 +58,13 @@
                         const items = parseItems(JSON.parse(res.body), c.title, u);
                         if (items.length) results[c.title] = items;
                     }
-                } catch {}
-                count++;
-                if (count === valid.length) cb({ success: true, data: results });
+                } catch (e) {
+                    console.error(`RingZ: Error fetching ${c.title}: ${e.message}`);
+                }
             });
+
+            await Promise.all(promises);
+            cb({ success: true, data: results });
         } catch (e) {
             cb({ success: false, errorCode: "SITE_OFFLINE", message: e.message });
         }
@@ -72,14 +73,12 @@
     async function search(query, cb) {
         try {
             const cats = await fetchCats();
-            const results = [];
             const q = query.toLowerCase();
             const valid = cats.filter(c => !(c.adult === true || c.title.includes("Adult")));
-
             if (!valid.length) return cb({ success: true, data: [] });
 
-            let count = 0;
-            valid.forEach(async (c) => {
+            const results = [];
+            const promises = valid.map(async (c) => {
                 try {
                     const u = c.url.startsWith("http") ? c.url : `${manifest.baseUrl}/${c.url}`;
                     const res = await http_get(u, commonHeaders);
@@ -88,11 +87,14 @@
                             if (item.title.toLowerCase().includes(q)) results.push(item);
                         });
                     }
-                } catch {}
-                count++;
-                if (count === valid.length) cb({ success: true, data: results });
+                } catch (e) {
+                    console.error(`RingZ: Search error in ${c.title}: ${e.message}`);
+                }
             });
-        } catch {
+
+            await Promise.all(promises);
+            cb({ success: true, data: results });
+        } catch (e) {
             cb({ success: true, data: [] });
         }
     }
