@@ -83,7 +83,7 @@
         try {
             const res = await http_get(`${manifest.baseUrl}/?s=${encodeURIComponent(query)}`, headers);
             const doc = new JSDOM(res.body).window.document;
-            const items = Array.from(doc.querySelectorAll('ul[data-results] li article')).map(toMedia).filter(Boolean);
+            const items = Array.from(doc.querySelectorAll('ul[data-results] li article')).map(el => toMedia(el)).filter(Boolean);
             cb({ success: true, data: items });
         } catch (e) {
             cb({ success: false, errorCode: "SEARCH_ERROR", message: e.message });

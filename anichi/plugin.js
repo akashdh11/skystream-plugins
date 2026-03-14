@@ -108,7 +108,7 @@
             const variables = {
                 search: { query: query },
                 limit: 26,
-                page: page,
+                page: 1,
                 translationType: transType,
                 countryOrigin: "ALL"
             };

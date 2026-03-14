@@ -35,7 +35,7 @@
         const cleanB64 = body.replace(/\s/g, "");
         for (const k of KEYS) {
             try {
-                const dec = await sendMessage('crypto_decrypt_aes', JSON.stringify({ data: cleanB64, key: k.key, iv: k.iv }));
+                const dec = await crypto.decryptAES(cleanB64, k.key, k.iv);
                 if (dec && typeof dec === 'string' && (dec.trim().startsWith("{") || dec.trim().startsWith("["))) {
                     return JSON.parse(dec.trim());
                 }

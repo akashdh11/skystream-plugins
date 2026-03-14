@@ -26,8 +26,8 @@
             const iv = body.substring(10, 34);
             const key = body.substring(body.length - 54, body.length - 10);
             
-            // Note: sendMessage('crypto_decrypt_aes', ...) is a platform call
-            const decrypted = await sendMessage('crypto_decrypt_aes', JSON.stringify({ data: finalData, key, iv }));
+            // Use the standard async crypto API
+            const decrypted = await crypto.decryptAES(finalData, key, iv);
             if (decrypted && decrypted.includes("#EXTM3U")) return decrypted;
             throw new Error("Decryption failed");
         }

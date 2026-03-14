@@ -129,7 +129,7 @@
                 links.push(new StreamResult({ url: mag, source: qt || q, headers: {} }));
             }
             if (!links.length) { const mRegex = /href="(magnet:\?xt=urn:btih:[^"]+)"/g; while ((m = mRegex.exec(html)) !== null) links.push(new StreamResult({ url: m[1], source: "Magnet", headers: {} })); }
-            cb({ success: true, data: links.sort((a,b) => b.quality.includes("1080p") ? 1 : -1) });
+            cb({ success: true, data: links.sort((a,b) => (b.source || "").includes("1080p") ? 1 : -1) });
         } catch (e) { cb({ success: false, errorCode: "PARSE_ERROR", message: e.stack }); }
     }
 

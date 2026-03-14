@@ -134,6 +134,14 @@
         return "Auto";
     }
 
+    function unescapeHTML(str) {
+        if (!str) return "";
+        return str.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec))
+                  .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+                  .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+                  .replace(/&#8211;/g, "–").replace(/&#8212;/g, "—");
+    }
+
     function base64Decode(str) {
         try {
             return Buffer.from(str, 'base64').toString('utf8');
@@ -221,7 +229,7 @@
                             const titleMatch = /<(?:p|h\d)[^>]*class="(?:poster-title|entry-title|title)"[^>]*>([\s\S]*?)<\/(?:p|h\d)>/.exec(content) || /<(?:p|h\d)>([\s\S]*?)<\/(?:p|h\d)>/.exec(content);
                             const imgMatch = /<img[^>]+src="([^"]+)"/.exec(content);
                             
-                            const title = (titleMatch ? titleMatch[1] : "").replace(/<[^>]+>/g, "").replace("Download ", "").trim();
+                            const title = unescapeHTML((titleMatch ? titleMatch[1] : "").replace(/<[^>]+>/g, "").replace("Download ", "").trim());
                             const poster = imgMatch ? fixUrl(imgMatch[1]) : "";
                             
                             if (href && title && !href.includes("javascript")) {
@@ -243,7 +251,7 @@
                             const img = card.find("img");
                             const titleEl = card.find(".poster-title") || card.find("p") || card.find("h2") || card.find("h3");
                             
-                            const title = (titleEl ? titleEl.text() : "").replace("Download ", "").trim();
+                            const title = unescapeHTML((titleEl ? titleEl.text() : "").replace("Download ", "").trim());
                             const poster = img ? fixUrl(img.attr("src")) : "";
                             
                             if (href && title && !href.includes("javascript")) {
@@ -267,27 +275,28 @@
 
     async function search(query, cb) {
         try {
-            // Standard WordPress search
-            const res = await http_get(`${manifest.baseUrl}/?s=${encodeURIComponent(query)}`, CommonHeaders);
+            // Use the site's JSON search API
+            const res = await http_get(`${manifest.baseUrl}/searchapi.php?q=${encodeURIComponent(query)}&page=1`, CommonHeaders);
             if (res && res.body) {
-                const doc = JsoupLite.parse(res.body);
+                const data = JSON.parse(res.body);
                 const items = [];
-                doc.select("a.movie-card").forEach(card => {
-                    const titleEl = card.find("p");
-                    const img = card.find("img");
-                    const title = (titleEl ? titleEl.text() : "").replace("Download ", "").trim();
-                    const poster = img ? fixUrl(img.attr("src")) : "";
-                    const href = fixUrl(card.attr("href"));
-                    
-                    if (href && title) {
-                        items.push(new MultimediaItem({
-                            title,
-                            url: href,
-                            posterUrl: poster,
-                            type: title.toLowerCase().includes("episode") ? "tvseries" : "movie"
-                        }));
-                    }
-                });
+                if (data.hits && Array.isArray(data.hits)) {
+                    data.hits.forEach(hit => {
+                        const d = hit.document;
+                        const title = unescapeHTML((d.post_title || "").replace("Download ", "").trim());
+                        const href = fixUrl(d.permalink);
+                        const poster = fixUrl(d.post_thumbnail);
+                        
+                        if (href && title) {
+                            items.push(new MultimediaItem({
+                                title,
+                                url: href,
+                                posterUrl: poster,
+                                type: (title.toLowerCase().includes("episode") || title.toLowerCase().includes("season")) ? "tvseries" : "movie"
+                            }));
+                        }
+                    });
+                }
                 return cb({ success: true, data: items });
             }
             cb({ success: true, data: [] });

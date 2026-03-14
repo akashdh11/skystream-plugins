@@ -13,7 +13,7 @@
         if (s.length > 79 && !s.startsWith("#EXTM3U")) {
             const part1 = s.substring(0, 10), part2 = s.substring(34, s.length - 54), part3 = s.substring(s.length - 10);
             const data = part1 + part2 + part3, iv = s.substring(10, 34), key = s.substring(s.length - 54, s.length - 10);
-            const dec = await sendMessage('crypto_decrypt_aes', JSON.stringify({ data, key, iv }));
+            const dec = await crypto.decryptAES(data, key, iv);
             if (dec && dec.includes("#EXTM3U")) return dec;
         }
         return s;
