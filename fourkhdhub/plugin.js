@@ -374,7 +374,7 @@
 
     function base64Decode(str) {
         try {
-            return Buffer.from(str, 'base64').toString('utf8');
+            return atob(str);
         } catch { return ""; }
     }
 
