@@ -87,6 +87,7 @@
                     posterUrl: d.poster,
                     description: d.group,
                     type: "livestream",
+                    playbackPolicy: "Internal Player Only",
                     episodes: [new Episode({
                         name: "Watch Live",
                         season: 1,
