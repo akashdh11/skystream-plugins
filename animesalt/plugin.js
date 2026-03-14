@@ -1,5 +1,5 @@
 (function() {
-    const headers = { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" };
+    const headers = { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36" };
 
     function safeParse(data) {
         if (!data) return null;
@@ -263,8 +263,7 @@
                     url: data.videoSource,
                     source: `AWSStream [1080p]`,
                     headers: {
-                        "Referer": baseUrl + "/",
-                        "Origin": baseUrl,
+                        "Referer": "",
                         "User-Agent": headers["User-Agent"]
                     }
                 }));
@@ -274,28 +273,34 @@
 
     async function extractMegaPlay(url, streams) {
         try {
-             const urlObj = new URL(url);
-             const baseUrl = urlObj.origin;
-             const res = await http_get(url, headers);
-             const doc = new JSDOM(res.body).window.document;
-             const id = doc.querySelector('#megaplay-player')?.getAttribute('data-id');
-             
-             if (id) {
-                 const apiUrl = `${baseUrl}/stream/getSources?id=${id}&id=${id}`;
-                 const apiRes = await http_get(apiUrl, { ...headers, "X-Requested-With": "XMLHttpRequest", "Referer": url });
-                 const data = safeParse(apiRes);
-                 if (data && data.sources && data.sources.file) {
-                     streams.push(new StreamResult({
-                         url: data.sources.file,
-                         source: `MegaPlay [1080p]`,
-                         headers: {
-                             "Referer": baseUrl + "/",
-                             "Origin": baseUrl,
-                             "User-Agent": headers["User-Agent"]
-                         }
-                     }));
-                 }
-             }
+            const urlObj = new URL(url);
+            const baseUrl = urlObj.origin;
+            const res = await http_get(url, headers);
+            const doc = new JSDOM(res.body).window.document;
+            const id = doc.querySelector('#megaplay-player')?.getAttribute('data-id');
+
+            if (id) {
+                const apiUrl = `${baseUrl}/stream/getSources?id=${id}&id=${id}`;
+                const apiRes = await http_get(apiUrl, { ...headers, "X-Requested-With": "XMLHttpRequest", "Referer": url });
+                const data = safeParse(apiRes);
+                if (data && data.sources && data.sources.file) {
+                    streams.push(new StreamResult({
+                        url: data.sources.file,
+                        source: `MegaPlay [1080p]`,
+                        headers: {
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0",
+                            "Accept": "*/*",
+                            "Accept-Language": "en-US,en;q=0.5",
+                            "Accept-Encoding": "gzip, deflate, br, zstd",
+                            "Origin": "https://rapid-cloud.co",
+                            "Referer": "https://rapid-cloud.co/",
+                            "Connection": "keep-alive",
+                            "Pragma": "no-cache",
+                            "Cache-Control": "no-cache"
+                        }
+                    }));
+                }
+            }
         } catch (e) { console.error("MegaPlay Error:", e); }
     }
 
