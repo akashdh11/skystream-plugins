@@ -37,10 +37,11 @@
         
         try {
             const res = await http_post(API_URL, HEADERS, JSON.stringify(body));
-            if (!res || res.trim().startsWith("<")) {
+            const bodyStr = res.body || "";
+            if (res.status !== 200 || bodyStr.trim().startsWith("<")) {
                throw new Error("HTTP_BLOCK: Cloudflare or Network Error (HTML returned)");
             }
-            return JSON.parse(res);
+            return JSON.parse(bodyStr);
         } catch (e) {
             console.error("GraphQL Error: " + e.message);
             throw e;
@@ -101,7 +102,7 @@
         }
     }
 
-    async function search(query, page, cb) {
+    async function search(query, cb) {
         try {
             const transType = getPreference("translation_type") || "sub";
             const variables = {
@@ -148,7 +149,7 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ query, variables })
         });
-        const data = JSON.parse(res);
+        const data = JSON.parse(res.body);
         return data.data?.Page?.media?.[0];
     }
 
@@ -158,7 +159,7 @@
         const url = `https://api.themoviedb.org/3/${type === "movie" ? "movie" : "tv"}/${tmdbId}/images?api_key=${apiKey}`;
         try {
             const res = await http_get(url);
-            const data = JSON.parse(res);
+            const data = JSON.parse(res.body);
             const logos = data.logos || [];
             if (logos.length === 0) return null;
             // Prefer English
@@ -173,7 +174,7 @@
         if (!malId) return null;
         try {
             const res = await http_get(`https://api.ani.zip/mappings?mal_id=${malId}`);
-            return JSON.parse(res);
+            return JSON.parse(res.body);
         } catch (e) {
             return null;
         }
@@ -333,7 +334,7 @@
                 if (link.includes(".json?") || link.includes("apivtwo/clock.json")) {
                     try {
                         const jsonRes = await http_get(link, { headers: HEADERS });
-                        const videoData = JSON.parse(jsonRes);
+                        const videoData = JSON.parse(jsonRes.body);
                         const links = videoData.links || [];
                         links.forEach(l => {
                             streamResults.push(new StreamResult({

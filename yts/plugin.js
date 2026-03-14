@@ -20,6 +20,11 @@
     const MAIN_URL = manifest.baseUrl;
     const TRACKER_API = "https://newtrackon.com/api/stable";
 
+    async function _fetch(url) {
+        const res = await http_get(url, { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36" });
+        return res.body || "";
+    }
+
     function _parseMovies(html) {
             const results = [], items = html.split('<div class="browse-movie-wrap');
             for (let i = 1; i < items.length; i++) {

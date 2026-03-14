@@ -357,7 +357,7 @@
                                 }
                                 let linksArr = JSON.parse(ex.url);
                                 if (!Array.isArray(linksArr)) linksArr = [];
-                                linksArr.push({ source: href, source: qual });
+                                linksArr.push({ source: href, quality: qual });
                                 ex.url = JSON.stringify(linksArr);
                             } else {
                                 if (episodes.length === 0) {

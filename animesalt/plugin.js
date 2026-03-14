@@ -283,7 +283,7 @@
              if (id) {
                  const apiUrl = `${baseUrl}/stream/getSources?id=${id}&id=${id}`;
                  const apiRes = await http_get(apiUrl, { ...headers, "X-Requested-With": "XMLHttpRequest", "Referer": url });
-                 const data = safeParse(apiRes.body);
+                 const data = safeParse(apiRes);
                  if (data && data.sources && data.sources.file) {
                      streams.push(new StreamResult({
                          url: data.sources.file,
