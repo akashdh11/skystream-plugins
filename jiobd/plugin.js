@@ -108,10 +108,13 @@
     async function loadStreams(dataStr, cb) {
         try {
             let d;
-            try { d = JSON.parse(dataStr); } catch { d = { url: dataStr, headers: {} }; }
+            try { d = JSON.parse(dataStr); } catch { d = { url: dataStr, headers: { ...CommonHeaders } }; }
+            
+            // Ensure headers have essential keys
+            const headers = { ...CommonHeaders, ...(d.headers || {}) };
 
             if (d.kodiProps?.licenseUrl && d.url.includes(".mpd")) {
-                const res = await http_get(d.url, d.headers || {});
+                const res = await http_get(d.url, headers);
                 if (res && res.body) {
                     const kidMatch = res.body.match(/cenc:default_KID=["']([^"']+)["']/i);
                     if (kidMatch) {
@@ -122,8 +125,8 @@
                         
                         const body = JSON.stringify({ "kids": [kidB64], "type": "temporary" });
                         const lRes = await http_post(d.kodiProps.licenseUrl, { 
-                            "User-Agent": "Dalvik/2.1.0", 
-                            "Content-Type": "application/json" 
+                            "User-Agent": "Dalvik/2.1.0 (Linux; U; Android)", 
+                            "Content-Type": "application/json;charset=UTF-8" 
                         }, body);
                         
                         if (lRes && lRes.body) {
@@ -135,7 +138,7 @@
                                         data: [new StreamResult({
                                             url: d.url,
                                             source: "Auto",
-                                            headers: d.headers || {},
+                                            headers: headers,
                                             drmKey: lData.keys[0].k,
                                             drmKid: kidB64,
                                             licenseUrl: d.kodiProps.licenseUrl
@@ -149,7 +152,7 @@
                     }
                 }
             }
-            cb({ success: true, data: [new StreamResult({ url: d.url, source: "Auto", headers: d.headers || {} })] });
+            cb({ success: true, data: [new StreamResult({ url: d.url, source: "Auto", headers: headers })] });
         } catch (e) {
             cb({ success: false, errorCode: "STREAM_ERROR", message: e.message });
         }
