@@ -4,16 +4,7 @@
      */
     // var manifest is injected at runtime
 
-    const CommonHeaders = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0",
-    "Accept": "*/*",
-    "Cache-Control": "no-cache, no-store",
-    "sec-ch-ua": "\"Chromium\";v=\"91\", \" Not;A Brand\";v=\"99\"",
-    "sec-ch-ua-mobile": "?0",
-    "sec-fetch-user": "?1",
-    "sec-fetch-mode": "navigate",
-    "sec-fetch-dest": "video"
-};
+    const CommonHeaders = { "User-Agent": "Dalvik/2.1.0 (Linux; U; Android)" };
 
     function parseM3U(m3u) {
         const lines = m3u.split('\n');
@@ -23,21 +14,12 @@
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
             if (line.startsWith("#EXTINF:-1")) {
-                cur = { title: "Unknown", poster: "", group: "Other Channels", headers: { ...CommonHeaders }, kodiProps: {} };
+                cur = { title: "Unknown", poster: "", group: "Other Channels", headers: {}, kodiProps: {} };
                 const logo = line.match(/tvg-logo="([^"]*)"/); if (logo) cur.poster = logo[1];
                 const group = line.match(/group-title="([^"]*)"/); if (group) cur.group = group[1];
                 const split = line.split(","); if (split.length > 1) cur.title = split[split.length - 1].trim();
-            } else if (line.startsWith("#EXTHTTP:") && cur) {
-                try {
-                    const json = line.substring(9).trim();
-                    const httpData = JSON.parse(json);
-                    if (httpData.cookie) cur.headers["Cookie"] = httpData.cookie;
-                    if (httpData["user-agent"]) cur.headers["User-Agent"] = httpData["user-agent"];
-                } catch (e) {}
             } else if (line.startsWith("#EXTVLCOPT:http-user-agent=") && cur) {
                 cur.headers["User-Agent"] = line.split("=")[1].trim();
-            } else if (line.startsWith("#EXTVLCOPT:http-referrer=") && cur) {
-                cur.headers["Referer"] = line.split("=")[1].trim();
             } else if (line.startsWith("#KODIPROP:inputstream.adaptive.license_key=") && cur) {
                 cur.kodiProps.licenseUrl = line.split("=")[1].trim();
             } else if (line.startsWith("http") && cur) {
@@ -117,13 +99,10 @@
     async function loadStreams(dataStr, cb) {
         try {
             let d;
-            try { d = JSON.parse(dataStr); } catch { d = { url: dataStr, headers: { ...CommonHeaders } }; }
-            
-            // Ensure headers have essential keys
-            const headers = { ...CommonHeaders, ...(d.headers || {}) };
+            try { d = JSON.parse(dataStr); } catch { d = { url: dataStr, headers: {} }; }
 
             if (d.kodiProps?.licenseUrl && d.url.includes(".mpd")) {
-                const res = await http_get(d.url, headers);
+                const res = await http_get(d.url, d.headers || {});
                 if (res && res.body) {
                     const kidMatch = res.body.match(/cenc:default_KID=["']([^"']+)["']/i);
                     if (kidMatch) {
@@ -134,8 +113,8 @@
                         
                         const body = JSON.stringify({ "kids": [kidB64], "type": "temporary" });
                         const lRes = await http_post(d.kodiProps.licenseUrl, { 
-                            "User-Agent": "Dalvik/2.1.0 (Linux; U; Android)", 
-                            "Content-Type": "application/json;charset=UTF-8" 
+                            "User-Agent": "Dalvik/2.1.0", 
+                            "Content-Type": "application/json" 
                         }, body);
                         
                         if (lRes && lRes.body) {
@@ -147,7 +126,7 @@
                                         data: [new StreamResult({
                                             url: d.url,
                                             source: "Auto",
-                                            headers: headers,
+                                            headers: d.headers || {},
                                             drmKey: lData.keys[0].k,
                                             drmKid: kidB64,
                                             licenseUrl: d.kodiProps.licenseUrl
@@ -161,7 +140,7 @@
                     }
                 }
             }
-            cb({ success: true, data: [new StreamResult({ url: d.url, source: "Auto", headers: headers })] });
+            cb({ success: true, data: [new StreamResult({ url: d.url, source: "Auto", headers: d.headers || {} })] });
         } catch (e) {
             cb({ success: false, errorCode: "STREAM_ERROR", message: e.message });
         }
