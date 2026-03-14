@@ -8,28 +8,31 @@
             const homeData = {};
             
             // Helper to extract basic movie links from a section
-            const extractSectionLinks = (titleText, selector) => {
-                const headers = doc.querySelectorAll('h2.ipsType_sectionTitle');
+            const extractSectionLinks = (titleText) => {
+                // Try to find the section by text content in headers
+                const allElements = doc.querySelectorAll('h2, .shimmer-text, .ipsType_sectionTitle, .banger-header');
                 let targetHeader = null;
-                for (const h of headers) {
-                    if (h.textContent.toUpperCase().includes(titleText.toUpperCase())) {
-                        targetHeader = h;
+                for (const el of allElements) {
+                    if (el.textContent.toUpperCase().includes(titleText.toUpperCase())) {
+                        targetHeader = el;
                         break;
                     }
                 }
                 
                 if (!targetHeader) return [];
                 
-                // The IPS structure usually has the content in the next ipsBox container or similar sibling
-                const container = targetHeader.closest('.ipsBox');
+                // The content is usually in the same ipsBox or the next sibling ipsPad
+                const container = targetHeader.closest('.ipsBox') || targetHeader.parentElement;
                 if (!container) return [];
                 
-                const links = container.querySelectorAll('.ipsPad a');
+                // For Top Releases, links are often direct children of an ipsPad or in spans
+                const links = container.querySelectorAll('a');
                 const items = [];
                 for (const link of links) {
                     const title = link.textContent.trim();
                     const url = link.getAttribute('href');
-                    if (title && url && url.includes('topic')) {
+                    // Filter for topic links and avoid metadata links (like tags/authors)
+                    if (title && url && url.includes('topic') && !url.includes('profile') && title.length > 10) {
                         items.push(new MultimediaItem({
                             title: title,
                             url: url,
@@ -48,27 +51,31 @@
             homeData["Recently Added"] = extractSectionLinks("RECENTLY ADDED");
 
             // 3. Weekly Releases (Sidebar)
-            const sidebarWidget = doc.querySelector('.ipsWidget[data-blocktitle="Week Releases"], h3.ipsWidget_title');
-            if (sidebarWidget) {
-                // If we found the title, find the container
-                const widgetContainer = sidebarWidget.closest('.ipsWidget');
-                if (widgetContainer) {
-                    const topics = widgetContainer.querySelectorAll('li.ipsDataItem h4.ipsDataItem_title a');
-                    const items = [];
-                    for (const topic of topics) {
-                        const title = topic.textContent.trim();
-                        const url = topic.getAttribute('href');
-                        if (title && url) {
-                            items.push(new MultimediaItem({
-                                title: title,
-                                url: url,
-                                posterUrl: "https://placehold.co/400x600.png?text=" + encodeURIComponent(title.substring(0, 20)),
-                                type: "movie"
-                            }));
-                        }
-                    }
-                    homeData["Weekly Releases"] = items;
+            const sidebarTitles = doc.querySelectorAll('.ipsWidget_title');
+            let weekWidget = null;
+            for (const t of sidebarTitles) {
+                if (t.textContent.includes("Week Releases") || t.textContent.includes("Weekly Releases")) {
+                    weekWidget = t.closest('.ipsWidget');
+                    break;
                 }
+            }
+
+            if (weekWidget) {
+                const topics = weekWidget.querySelectorAll('li.ipsDataItem h4.ipsDataItem_title a');
+                const items = [];
+                for (const topic of topics) {
+                    const title = topic.textContent.trim();
+                    const url = topic.getAttribute('href');
+                    if (title && url) {
+                        items.push(new MultimediaItem({
+                            title: title,
+                            url: url,
+                            posterUrl: "https://placehold.co/400x600.png?text=" + encodeURIComponent(title.substring(0, 20)),
+                            type: "movie"
+                        }));
+                    }
+                }
+                homeData["Weekly Releases"] = items;
             }
 
             cb({ success: true, data: homeData });
