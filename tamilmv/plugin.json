@@ -1,0 +1,10 @@
+{
+  "packageName": "dev.akash.stars.tamilmv",
+  "name": "TamilMV",
+  "version": 1,
+  "baseUrl": "https://www.1tamilmv.army",
+  "description": "TamilMV forum-based torrent plugin (Magnets/Torrents)",
+  "authors": ["Akash"],
+  "languages": ["ta", "ml", "te", "hi", "en"],
+  "categories": ["Tamil", "Malayalam", "Telugu", "Hindi", "English"]
+}
