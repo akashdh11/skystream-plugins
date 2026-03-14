@@ -1,44 +1,73 @@
 (function() {
     async function getHome(cb) {
         try {
-            const categories = [
-                { name: "Tamil", url: "https://www.1tamilmv.army/index.php?/forums/forum/9-tamil-language/" },
-                { name: "Malayalam", url: "https://www.1tamilmv.army/index.php?/forums/forum/34-malayalam-language/" },
-                { name: "Telugu", url: "https://www.1tamilmv.army/index.php?/forums/forum/22-telugu-language/" },
-                { name: "Hindi", url: "https://www.1tamilmv.army/index.php?/forums/forum/56-hindi-language/" },
-                { name: "English", url: "https://www.1tamilmv.army/index.php?/forums/forum/45-english-language/" }
-            ];
-
+            const html = await http_get("https://www.1tamilmv.army/index.php");
+            const dom = new JSDOM(html);
+            const doc = dom.window.document;
+            
             const homeData = {};
             
-            // For getHome, we'll just fetch the first few topics from each category page
-            // to populate the horizontal rows.
-            for (const cat of categories) {
-                const html = await http_get(cat.url);
-                const dom = new JSDOM(html);
-                const doc = dom.window.document;
+            // Helper to extract basic movie links from a section
+            const extractSectionLinks = (titleText, selector) => {
+                const headers = doc.querySelectorAll('h2.ipsType_sectionTitle');
+                let targetHeader = null;
+                for (const h of headers) {
+                    if (h.textContent.toUpperCase().includes(titleText.toUpperCase())) {
+                        targetHeader = h;
+                        break;
+                    }
+                }
                 
-                const topics = doc.querySelectorAll('.ipsDataItem_title a');
+                if (!targetHeader) return [];
+                
+                // The IPS structure usually has the content in the next ipsBox container or similar sibling
+                const container = targetHeader.closest('.ipsBox');
+                if (!container) return [];
+                
+                const links = container.querySelectorAll('.ipsPad a');
                 const items = [];
-                
-                for (let i = 0; i < Math.min(topics.length, 12); i++) {
-                    const topic = topics[i];
-                    const title = topic.textContent.trim();
-                    const url = topic.getAttribute('href');
-                    
-                    if (title && url) {
+                for (const link of links) {
+                    const title = link.textContent.trim();
+                    const url = link.getAttribute('href');
+                    if (title && url && url.includes('topic')) {
                         items.push(new MultimediaItem({
                             title: title,
                             url: url,
-                            // Thumbnails are not available on forum list, use placeholder
                             posterUrl: "https://placehold.co/400x600.png?text=" + encodeURIComponent(title.substring(0, 20)),
                             type: "movie"
                         }));
                     }
                 }
-                
-                if (items.length > 0) {
-                    homeData[cat.name] = items;
+                return items;
+            };
+
+            // 1. Top Releases This Week
+            homeData["Top Releases This Week"] = extractSectionLinks("TOP RELEASES THIS WEEK");
+            
+            // 2. Recently Added
+            homeData["Recently Added"] = extractSectionLinks("RECENTLY ADDED");
+
+            // 3. Weekly Releases (Sidebar)
+            const sidebarWidget = doc.querySelector('.ipsWidget[data-blocktitle="Week Releases"], h3.ipsWidget_title');
+            if (sidebarWidget) {
+                // If we found the title, find the container
+                const widgetContainer = sidebarWidget.closest('.ipsWidget');
+                if (widgetContainer) {
+                    const topics = widgetContainer.querySelectorAll('li.ipsDataItem h4.ipsDataItem_title a');
+                    const items = [];
+                    for (const topic of topics) {
+                        const title = topic.textContent.trim();
+                        const url = topic.getAttribute('href');
+                        if (title && url) {
+                            items.push(new MultimediaItem({
+                                title: title,
+                                url: url,
+                                posterUrl: "https://placehold.co/400x600.png?text=" + encodeURIComponent(title.substring(0, 20)),
+                                type: "movie"
+                            }));
+                        }
+                    }
+                    homeData["Weekly Releases"] = items;
                 }
             }
 
