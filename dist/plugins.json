@@ -358,11 +358,9 @@
       "en"
     ],
     "categories": [
-      "Tamil",
-      "Malayalam",
-      "Telugu",
-      "Hindi",
-      "English"
+      "Top Releases This Week",
+      "Recently Added",
+      "Weekly Releases"
     ],
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.tamilmv.sky"
   },
