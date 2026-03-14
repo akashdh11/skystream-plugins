@@ -4,7 +4,15 @@
      */
     // var manifest is injected at runtime
 
-    const CommonHeaders = { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0" };
+    const CommonHeaders = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0",
+    "Accept": "*/*",
+    "Accept-Language": "en-US,en;q=0.5",
+    "Cache-Control": "no-cache, no-store",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "cross-site"
+};
 
     function parseM3U(m3u) {
         const lines = m3u.split('\n');
