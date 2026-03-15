@@ -122,11 +122,13 @@
                     console.log("[JioBD] play.php response code: " + res.status);
                     if (res && res.headers) {
                         console.log("[JioBD] Response Headers: " + JSON.stringify(res.headers));
-                        const setCookie = res.headers["set-cookie"] || res.headers["Set-Cookie"] || res.headers["SET-COOKIE"];
-                        if (setCookie) {
-                            const cookie = setCookie.split(';')[0];
-                            console.log("[JioBD] Captured Cookie: " + cookie);
-                            headers["Cookie"] = cookie;
+                        // Capture all cookies from either 'set-cookie' or 'cookie' header
+                        const cookieHeader = res.headers["set-cookie"] || res.headers["Set-Cookie"] || res.headers["cookie"] || res.headers["Cookie"];
+                        if (cookieHeader) {
+                            // If it's the result of our js_engine alias, it might already be semicolon separated.
+                            // We want the most complete cookie string possible for the player.
+                            console.log("[JioBD] Captured Cookies: " + cookieHeader);
+                            headers["Cookie"] = cookieHeader;
                         }
                     }
                     if (res && res.finalUrl && res.finalUrl !== d.url) {
