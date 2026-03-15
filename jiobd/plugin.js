@@ -14,12 +14,21 @@
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
             if (line.startsWith("#EXTINF:-1")) {
-                cur = { title: "Unknown", poster: "", group: "Other Channels", headers: {}, kodiProps: {} };
+                cur = { title: "Unknown", poster: "", group: "Other Channels", headers: { ...CommonHeaders }, kodiProps: {} };
                 const logo = line.match(/tvg-logo="([^"]*)"/); if (logo) cur.poster = logo[1];
                 const group = line.match(/group-title="([^"]*)"/); if (group) cur.group = group[1];
                 const split = line.split(","); if (split.length > 1) cur.title = split[split.length - 1].trim();
+            } else if (line.startsWith("#EXTHTTP:") && cur) {
+                try {
+                    const json = line.substring(9).trim();
+                    const httpData = JSON.parse(json);
+                    if (httpData.cookie) cur.headers["Cookie"] = httpData.cookie;
+                    if (httpData["user-agent"]) cur.headers["User-Agent"] = httpData["user-agent"];
+                } catch (e) {}
             } else if (line.startsWith("#EXTVLCOPT:http-user-agent=") && cur) {
                 cur.headers["User-Agent"] = line.split("=")[1].trim();
+            } else if (line.startsWith("#EXTVLCOPT:http-referrer=") && cur) {
+                cur.headers["Referer"] = line.split("=")[1].trim();
             } else if (line.startsWith("#KODIPROP:inputstream.adaptive.license_key=") && cur) {
                 cur.kodiProps.licenseUrl = line.split("=")[1].trim();
             } else if (line.startsWith("http") && cur) {
@@ -99,10 +108,13 @@
     async function loadStreams(dataStr, cb) {
         try {
             let d;
-            try { d = JSON.parse(dataStr); } catch { d = { url: dataStr, headers: {} }; }
+            try { d = JSON.parse(dataStr); } catch { d = { url: dataStr, headers: { ...CommonHeaders } }; }
+            
+            // Ensure headers have essential keys
+            const headers = { ...CommonHeaders, ...(d.headers || {}) };
 
             if (d.kodiProps?.licenseUrl && d.url.includes(".mpd")) {
-                const res = await http_get(d.url, d.headers || {});
+                const res = await http_get(d.url, headers);
                 if (res && res.body) {
                     const kidMatch = res.body.match(/cenc:default_KID=["']([^"']+)["']/i);
                     if (kidMatch) {
@@ -126,7 +138,7 @@
                                         data: [new StreamResult({
                                             url: d.url,
                                             source: "Auto",
-                                            headers: d.headers || {},
+                                            headers: headers,
                                             drmKey: lData.keys[0].k,
                                             drmKid: kidB64,
                                             licenseUrl: d.kodiProps.licenseUrl
@@ -140,7 +152,7 @@
                     }
                 }
             }
-            cb({ success: true, data: [new StreamResult({ url: d.url, source: "Auto", headers: d.headers || {} })] });
+            cb({ success: true, data: [new StreamResult({ url: d.url, source: "Auto", headers: headers })] });
         } catch (e) {
             cb({ success: false, errorCode: "STREAM_ERROR", message: e.message });
         }
