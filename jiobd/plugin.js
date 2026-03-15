@@ -115,22 +115,30 @@
 
             // [CRITICAL] play.php requires a session cookie (X_CACHE_KEY) for HLS reloads.
             // We hit the URL once to capture the Set-Cookie header.
+            let playUrl = d.url;
             if (d.url.includes("play.php")) {
                 try {
                     const res = await http_get(d.url, headers);
+                    console.log("[JioBD] play.php response code: " + res.status);
                     if (res && res.headers) {
-                        const setCookie = res.headers["set-cookie"] || res.headers["Set-Cookie"];
+                        console.log("[JioBD] Response Headers: " + JSON.stringify(res.headers));
+                        const setCookie = res.headers["set-cookie"] || res.headers["Set-Cookie"] || res.headers["SET-COOKIE"];
                         if (setCookie) {
                             const cookie = setCookie.split(';')[0];
+                            console.log("[JioBD] Captured Cookie: " + cookie);
                             headers["Cookie"] = cookie;
                         }
                     }
+                    if (res && res.finalUrl && res.finalUrl !== d.url) {
+                        console.log("[JioBD] Redirected to: " + res.finalUrl);
+                        playUrl = res.finalUrl;
+                    }
                 } catch (e) {
-                    console.error("Cookie fetch error: " + e.message);
+                    console.error("[JioBD] Cookie fetch error: " + e.message);
                 }
             }
 
-            if (d.kodiProps?.licenseUrl && d.url.includes(".mpd")) {
+            if (d.kodiProps?.licenseUrl && playUrl.includes(".mpd")) {
                 const res = await http_get(d.url, headers);
                 if (res && res.body) {
                     const kidMatch = res.body.match(/cenc:default_KID=["']([^"']+)["']/i);
@@ -169,7 +177,7 @@
                     }
                 }
             }
-            cb({ success: true, data: [new StreamResult({ url: d.url, source: "Auto", headers: headers })] });
+            cb({ success: true, data: [new StreamResult({ url: playUrl, source: "Auto", headers: headers })] });
         } catch (e) {
             cb({ success: false, errorCode: "STREAM_ERROR", message: e.message });
         }
