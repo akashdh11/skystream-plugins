@@ -113,6 +113,23 @@
             // Ensure headers have essential keys
             const headers = { ...CommonHeaders, ...(d.headers || {}) };
 
+            // [CRITICAL] play.php requires a session cookie (X_CACHE_KEY) for HLS reloads.
+            // We hit the URL once to capture the Set-Cookie header.
+            if (d.url.includes("play.php")) {
+                try {
+                    const res = await http_get(d.url, headers);
+                    if (res && res.headers) {
+                        const setCookie = res.headers["set-cookie"] || res.headers["Set-Cookie"];
+                        if (setCookie) {
+                            const cookie = setCookie.split(';')[0];
+                            headers["Cookie"] = cookie;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Cookie fetch error: " + e.message);
+                }
+            }
+
             if (d.kodiProps?.licenseUrl && d.url.includes(".mpd")) {
                 const res = await http_get(d.url, headers);
                 if (res && res.body) {
