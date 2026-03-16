@@ -117,32 +117,7 @@
             // Ensure headers have essential keys
             const headers = { ...CommonHeaders, ...(d.headers || {}) };
 
-            // [CRITICAL] play.php requires a session cookie (X_CACHE_KEY) for HLS reloads.
-            // We hit the URL once to capture the Set-Cookie header.
             let playUrl = d.url;
-            if (d.url.includes("play.php")) {
-                try {
-                    const res = await http_get(d.url, headers);
-                    console.log("[JioBD] play.php response code: " + res.status);
-                    if (res && res.headers) {
-                        console.log("[JioBD] Response Headers: " + JSON.stringify(res.headers));
-                        // Capture all cookies from either 'set-cookie' or 'cookie' header
-                        const cookieHeader = res.headers["set-cookie"] || res.headers["Set-Cookie"] || res.headers["cookie"] || res.headers["Cookie"];
-                        if (cookieHeader) {
-                            // If it's the result of our js_engine alias, it might already be semicolon separated.
-                            // We want the most complete cookie string possible for the player.
-                            console.log("[JioBD] Captured Cookies: " + cookieHeader);
-                            headers["Cookie"] = cookieHeader;
-                        }
-                    }
-                    if (res && res.finalUrl && res.finalUrl !== d.url) {
-                        console.log("[JioBD] Redirected to: " + res.finalUrl);
-                        playUrl = res.finalUrl;
-                    }
-                } catch (e) {
-                    console.error("[JioBD] Cookie fetch error: " + e.message);
-                }
-            }
 
             if (d.kodiProps?.licenseUrl && playUrl.includes(".mpd")) {
                 const res = await http_get(d.url, headers);
