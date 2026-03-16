@@ -7,12 +7,12 @@
         try { return JSON.parse(data); } catch (e) { return null; }
     }
 
-    function toMedia(element, type = "series") {
+    async function toMedia(element, type = "series") {
         const lnk = element.querySelector('a');
         if (!lnk) return null;
         const href = lnk.getAttribute('href') || "";
-        const title = element.querySelector('header h2')?.textContent?.trim() || "Untitled";
-        const img = element.querySelector('img');
+        const title = (await element.querySelector('header h2'))?.textContent?.trim() || "Untitled";
+        const img = await element.querySelector('img');
         let poster = img?.getAttribute('data-src') || img?.getAttribute('data-lazy-src') || img?.getAttribute('src');
         if (poster?.startsWith('data:image')) {
              poster = img?.getAttribute('data-src') || img?.getAttribute('data-lazy-src');
@@ -62,8 +62,9 @@
                     }
 
                     const res = await http_get(url, headers);
-                    const doc = new JSDOM(res.body).window.document;
-                    const items = Array.from(doc.querySelectorAll('article')).map(el => toMedia(el, cat.type)).filter(Boolean);
+                    const doc = await parseHtml(res.body);
+                    const articles = await doc.querySelectorAll('article');
+                    const items = (await Promise.all(articles.map(el => toMedia(el, cat.type)))).filter(Boolean);
                     if (items.length > 0) result[cat.name] = items;
                 } catch (e) {
                     console.error(`Error fetching category ${cat.name}:`, e);
@@ -82,8 +83,9 @@
             const res = await http_post(`${manifest.baseUrl}/wp-admin/admin-ajax.php`, { ...headers, "Content-Type": "application/x-www-form-urlencoded" }, formData);
             const data = safeParse(res.body);
             if (data && data.success && data.data && data.data.content) {
-                const doc = new JSDOM(data.data.content).window.document;
-                const items = Array.from(doc.querySelectorAll('article')).map(el => toMedia(el)).filter(Boolean);
+                const doc = await parseHtml(data.data.content);
+                const articles = await doc.querySelectorAll('article');
+                const items = (await Promise.all(articles.map(el => toMedia(el)))).filter(Boolean);
                 cb({ success: true, data: items });
             } else {
                 cb({ success: true, data: [] });
@@ -98,10 +100,10 @@
             const media = safeParse(urlStr);
             if (!media) throw new Error("Invalid URL data");
             const res = await http_get(media.url, headers);
-            const doc = new JSDOM(res.body).window.document;
+            const doc = await parseHtml(res.body);
 
-            const title = doc.querySelector('h1')?.textContent?.trim() || "No Title";
-            const img = doc.querySelector('div.bd > div:nth-child(1) > img');
+            const title = (await doc.querySelector('h1'))?.textContent?.trim() || "No Title";
+            const img = await doc.querySelector('div.bd > div:nth-child(1) > img');
             let poster = img?.getAttribute('src') || img?.getAttribute('data-src') || img?.getAttribute('data-lazy-src') || media.poster;
             if (poster?.startsWith('data:image')) {
                  poster = img?.getAttribute('data-src') || img?.getAttribute('data-lazy-src') || media.poster;
@@ -109,24 +111,27 @@
             if (poster && !poster.startsWith('http')) {
                 poster = (poster.startsWith('//') ? 'https:' : '') + poster;
             }
-            const plot = doc.querySelector('#overview-text p')?.textContent?.trim() || "";
-            const yearText = Array.from(doc.querySelectorAll('div')).find(el => el.textContent.trim().match(/^\d{4}$/))?.textContent?.trim();
+            const plot = (await doc.querySelector('#overview-text p'))?.textContent?.trim() || "";
+            const divs = await doc.querySelectorAll('div');
+            const yearText = Array.from(divs).find(el => el.textContent.trim().match(/^\d{4}$/))?.textContent?.trim();
             const year = yearText ? parseInt(yearText) : null;
             
             const tvType = media.url.includes("movies") ? "movie" : "series";
 
             const sections = ["Genres", "Languages"];
             let tags = [];
-            sections.forEach(label => {
-                const h4 = Array.from(doc.querySelectorAll('h4')).find(el => el.textContent.includes(label));
+            const headers4 = await doc.querySelectorAll('h4');
+            for (const label of sections) {
+                const h4 = Array.from(headers4).find(el => el.textContent.includes(label));
                 if (h4 && h4.nextElementSibling) {
-                    tags = tags.concat(Array.from(h4.nextElementSibling.querySelectorAll('a')).map(a => a.textContent.trim()));
+                    const links = await h4.nextElementSibling.querySelectorAll('a');
+                    tags = tags.concat(Array.from(links).map(a => a.textContent.trim()));
                 }
-            });
+            }
 
             if (tvType === "series") {
                 const episodes = [];
-                const seasonButtons = Array.from(doc.querySelectorAll('div.season-buttons a, .toro-season-button'));
+                const seasonButtons = await doc.querySelectorAll('div.season-buttons a, .toro-season-button');
                 
                 for (const btn of seasonButtons) {
                     const postId = btn.getAttribute('data-post');
@@ -135,11 +140,12 @@
 
                     const formData = `action=action_select_season&season=${dataSeason}&post=${postId}`;
                     const res = await http_post(`${manifest.baseUrl}/wp-admin/admin-ajax.php`, { ...headers, "Content-Type": "application/x-www-form-urlencoded" }, formData);
-                    const epDoc = new JSDOM(res.body).window.document;
+                    const epDoc = await parseHtml(res.body);
 
-                    Array.from(epDoc.querySelectorAll('li article')).forEach((ep, index) => {
-                        const href = ep.querySelector('a')?.getAttribute('href');
-                        const epImg = ep.querySelector('div.post-thumbnail img');
+                    const articles = await epDoc.querySelectorAll('li article');
+                    for (const [index, ep] of Array.from(articles).entries()) {
+                        const href = (await ep.querySelector('a'))?.getAttribute('href');
+                        const epImg = await ep.querySelector('div.post-thumbnail img');
                         let image = epImg?.getAttribute('src') || epImg?.getAttribute('data-src');
                         if (image?.startsWith('data:image')) image = epImg?.getAttribute('data-src');
                         const name = ep.querySelector('h2.entry-title')?.textContent?.trim() || `Episode ${index + 1}`;
@@ -151,7 +157,7 @@
                             season: seasonNum,
                             episode: index + 1
                         }));
-                    });
+                    }
                 }
 
                 cb({
@@ -200,8 +206,8 @@
             const streams = [];
 
             const res = await http_get(media.url, headers);
-            const doc = new JSDOM(res.body).window.document;
-            const iframes = Array.from(doc.querySelectorAll('#options-0 iframe'));
+            const doc = await parseHtml(res.body);
+            const iframes = await doc.querySelectorAll('#options-0 iframe');
 
             for (const iframe of iframes) {
                 let src = iframe.getAttribute('data-src');
@@ -276,8 +282,8 @@
             const urlObj = new URL(url);
             const baseUrl = urlObj.origin;
             const res = await http_get(url, headers);
-            const doc = new JSDOM(res.body).window.document;
-            const id = doc.querySelector('#megaplay-player')?.getAttribute('data-id');
+            const doc = await parseHtml(res.body);
+            const id = (await doc.querySelector('#megaplay-player'))?.getAttribute('data-id');
 
             if (id) {
                 const apiUrl = `${baseUrl}/stream/getSources?id=${id}&id=${id}`;
