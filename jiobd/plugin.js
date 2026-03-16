@@ -117,7 +117,26 @@
             // Ensure headers have essential keys
             const headers = { ...CommonHeaders, ...(d.headers || {}) };
 
+            // [CRITICAL] Cloudflare protected play.php requires a session cookie.
+            // We hit it once (matched native extension behavior) but MUST capture cookies manually
+            // since the player engine doesn't always share the same cookie jar as the JS engine.
             let playUrl = d.url;
+            if (d.url.includes("play.php")) {
+                try {
+                    const res = await http_get(d.url, headers);
+                    if (res && res.headers) {
+                        const cookieHeader = res.headers["set-cookie"] || res.headers["Set-Cookie"];
+                        if (cookieHeader) {
+                            headers["Cookie"] = cookieHeader;
+                        }
+                    }
+                    if (res && res.finalUrl && res.finalUrl !== d.url) {
+                        playUrl = res.finalUrl;
+                    }
+                } catch (e) {
+                    console.error("[JioBD] Pre-fetch error: " + e.message);
+                }
+            }
 
             if (d.kodiProps?.licenseUrl && playUrl.includes(".mpd")) {
                 const res = await http_get(d.url, headers);
