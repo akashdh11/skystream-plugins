@@ -210,11 +210,11 @@
                     description: aniEp?.overview || "No summary available",
                     posterUrl: aniEp?.image || toMultimediaItem(show).posterUrl,
                     runtime: aniEp?.runtime,
+                    dubStatus: "sub",
                     headers: HEADERS
                 });
             });
 
-            // Handle DUB episodes if available
             const dubEpisodes = (show.availableEpisodesDetail?.dub || []).map(epNum => {
                 const aniEp = aniZip?.episodes?.[epNum];
                 return new Episode({
@@ -225,6 +225,7 @@
                     description: aniEp?.overview || "No summary available",
                     posterUrl: aniEp?.image || toMultimediaItem(show).posterUrl,
                     runtime: aniEp?.runtime,
+                    dubStatus: "dub",
                     headers: HEADERS
                 });
             });
