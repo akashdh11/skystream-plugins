@@ -1,7 +1,7 @@
 {
   "packageName": "dev.akash.stars.netmirror.netflix",
   "name": "Netflix Mirror",
-  "version": 1,
+  "version": 2,
   "baseUrl": "https://net22.cc",
   "description": "Netflix content mirror from NetMirror",
   "authors": ["Akash"],

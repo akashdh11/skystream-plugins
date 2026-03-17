@@ -81,7 +81,7 @@
     async function search(query, cb) {
         try {
             const cookieStr = await getCookieString();
-            const url = `${BASE_URL}/hs/search.php?s=${encodeURIComponent(query)}&t=${Math.floor(Date.now()/1000)}`;
+            const url = `${BASE_URL}/mobile/hs/search.php?s=${encodeURIComponent(query)}&t=${Math.floor(Date.now()/1000)}`;
             const res = await http_get(url, { ...CommonHeaders, "Referer": `${BASE_URL}/home`, "Cookie": cookieStr });
             const data = JSON.parse(res.body);
             const results = (data.searchResult || []).map(item => new MultimediaItem({
@@ -96,7 +96,7 @@
         try {
             const { id } = JSON.parse(urlData);
             const cookieStr = await getCookieString();
-            const url = `${BASE_URL}/hs/post.php?id=${id}&t=${Math.floor(Date.now()/1000)}`;
+            const url = `${BASE_URL}/mobile/hs/post.php?id=${id}&t=${Math.floor(Date.now()/1000)}`;
             const res = await http_get(url, { ...CommonHeaders, "Referer": `${BASE_URL}/tv/home`, "Cookie": cookieStr });
             const data = JSON.parse(res.body);
             const episodes = [];
@@ -125,7 +125,7 @@
         let pg = page;
         while (true) {
             try {
-                const url = `${BASE_URL}/hs/episodes.php?s=${seasonId}&series=${seriesId}&t=${Math.floor(Date.now()/1000)}&page=${pg}`;
+                const url = `${BASE_URL}/mobile/hs/episodes.php?s=${seasonId}&series=${seriesId}&t=${Math.floor(Date.now()/1000)}&page=${pg}`;
                 const res = await http_get(url, { ...CommonHeaders, "Cookie": cookieStr });
                 const data = JSON.parse(res.body);
                 if (data.episodes) {

@@ -1,7 +1,7 @@
 {
   "packageName": "dev.akash.stars.netmirror.prime",
   "name": "Prime Mirror",
-  "version": 1,
+  "version": 2,
   "baseUrl": "https://net22.cc",
   "description": "Prime Video content mirror from NetMirror",
   "authors": ["Akash"],

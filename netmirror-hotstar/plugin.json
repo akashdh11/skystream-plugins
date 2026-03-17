@@ -1,7 +1,7 @@
 {
   "packageName": "dev.akash.stars.netmirror.hotstar",
   "name": "Hotstar Mirror",
-  "version": 1,
+  "version": 2,
   "baseUrl": "https://net22.cc",
   "description": "Hotstar content mirror from NetMirror",
   "authors": ["Akash"],

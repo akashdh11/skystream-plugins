@@ -1,7 +1,7 @@
 (function() {
     const BASE_URL = "https://net22.cc";
     const PLAY_URL = "https://net52.cc";
-    const OTT = "dp";
+    const OTT = "hs";
 
     const CommonHeaders = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -81,7 +81,7 @@
     async function search(query, cb) {
         try {
             const cookieStr = await getCookieString();
-            const url = `${BASE_URL}/dp/search.php?s=${encodeURIComponent(query)}&t=${Math.floor(Date.now()/1000)}`;
+            const url = `${BASE_URL}/mobile/hs/search.php?s=${encodeURIComponent(query)}&t=${Math.floor(Date.now()/1000)}`;
             const res = await http_get(url, { ...CommonHeaders, "Referer": `${BASE_URL}/home`, "Cookie": cookieStr });
             const data = JSON.parse(res.body);
             const results = (data.searchResult || []).map(item => new MultimediaItem({
@@ -96,7 +96,7 @@
         try {
             const { id } = JSON.parse(urlData);
             const cookieStr = await getCookieString();
-            const url = `${BASE_URL}/dp/post.php?id=${id}&t=${Math.floor(Date.now()/1000)}`;
+            const url = `${BASE_URL}/mobile/hs/post.php?id=${id}&t=${Math.floor(Date.now()/1000)}`;
             const res = await http_get(url, { ...CommonHeaders, "Referer": `${BASE_URL}/tv/home`, "Cookie": cookieStr });
             const data = JSON.parse(res.body);
             const episodes = [];
@@ -125,7 +125,7 @@
         let pg = page;
         while (true) {
             try {
-                const url = `${BASE_URL}/dp/episodes.php?s=${seasonId}&series=${seriesId}&t=${Math.floor(Date.now()/1000)}&page=${pg}`;
+                const url = `${BASE_URL}/mobile/hs/episodes.php?s=${seasonId}&series=${seriesId}&t=${Math.floor(Date.now()/1000)}&page=${pg}`;
                 const res = await http_get(url, { ...CommonHeaders, "Cookie": cookieStr });
                 const data = JSON.parse(res.body);
                 if (data.episodes) {
@@ -152,7 +152,7 @@
             const iframeRes = await http_get(`${PLAY_URL}/play.php?id=${id}&${h}`, { ...CommonHeaders, "Referer": `${BASE_URL}/`, "Cookie": cookieStrInitial });
             const tokenMatch = iframeRes.body.match(/data-h="([^"]+)"/);
             const token = tokenMatch ? tokenMatch[1] : "";
-            const playlistUrl = `${PLAY_URL}/playlist.php?id=${id}&t=${encodeURIComponent(title)}&tm=${Math.floor(Date.now()/1000)}&h=${token}`;
+            const playlistUrl = `${PLAY_URL}/mobile/hs/playlist.php?id=${id}&t=${encodeURIComponent(title)}&tm=${Math.floor(Date.now()/1000)}&h=${token}`;
             const listRes = await http_get(playlistUrl, { ...CommonHeaders, "Referer": `${PLAY_URL}/`, "Cookie": cookieStrInitial });
             const playlist = JSON.parse(listRes.body);
             const results = [];
