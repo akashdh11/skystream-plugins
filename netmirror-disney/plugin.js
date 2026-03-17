@@ -65,31 +65,33 @@
             const html = res.body;
             const sections = {};
             
-            // Mobile layout parsing
-            const trayRegex = /<(div|section)[^>]+class="[^"]*(tray-container|top10)[^"]*"[^>]*>([\s\S]*?)(?=<div[^>]+class="[^"]*(tray-container|top10)[^"]*"[^>]*>|$)/g;
-            let trayMatch;
-            while ((trayMatch = trayRegex.exec(html)) !== null) {
-                const trayHtml = trayMatch[3];
-                // Skip style definitions
-                if (trayHtml.includes("{")) continue;
-
-                const titleMatch = trayHtml.match(/<(h2|span)[^>]*>([\s\S]*?)<\/\1>/);
-                const title = titleMatch ? titleMatch[2].replace(/<[^>]*>/g, "").trim() : "Trending";
-                
-                const items = [];
-                const itemRegex = /data-post="([^"]+)"/g;
-                let itemMatch;
-                while ((itemMatch = itemRegex.exec(trayHtml)) !== null) {
-                    const id = itemMatch[1];
-                    if (id && !items.some(it => JSON.parse(it.url).id === id)) {
-                        items.push(new MultimediaItem({
-                            title: " ", url: JSON.stringify({ id: id }),
-                            posterUrl: proxyImage(`https://imgcdn.kim/hs/v/${id}.jpg`), type: "movie"
-                        }));
+            // Stateful parsing: scan whole page for titles and items in order
+            const globalRegex = /<(h2|span|div|p)[^>]*class="[^"]*(tray-title|mobile-tray-title|title|tray-title-container)[^"]*"[^>]*>([\s\S]*?)<\/\1>|data-post="([^"]+)"/ig;
+            
+            let currentTitle = "Trending";
+            let gMatch;
+            while ((gMatch = globalRegex.exec(html)) !== null) {
+                if (gMatch[3]) { // Title match
+                    const titleText = gMatch[3].replace(/<[^>]*>/g, "").trim();
+                    // Basic sanity check for category names
+                    if (titleText && titleText.length > 2 && titleText.length < 50 && !titleText.includes("{")) {
+                        currentTitle = titleText;
+                    }
+                } else if (gMatch[4]) { // Item ID match
+                    const id = gMatch[4];
+                    // Filter out non-functional template IDs
+                    if (id && !id.includes("'") && !id.includes("+")) {
+                        if (!sections[currentTitle]) sections[currentTitle] = [];
+                        if (!sections[currentTitle].some(it => JSON.parse(it.url).id === id)) {
+                            sections[currentTitle].push(new MultimediaItem({
+                                title: " ", url: JSON.stringify({ id: id }),
+                                posterUrl: proxyImage(`https://imgcdn.kim/hs/v/${id}.jpg`), type: "movie"
+                            }));
+                        }
                     }
                 }
-                if (items.length > 0) sections[title] = items;
             }
+
             cb({ success: true, data: sections });
         } catch (e) { cb({ success: false, errorCode: "HOME_ERROR", message: e.message }); }
     }
