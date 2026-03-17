@@ -239,6 +239,86 @@
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.netmirror.sky"
   },
   {
+    "packageName": "dev.akash.stars.netmirror.disney",
+    "name": "Disney Mirror",
+    "version": 1,
+    "baseUrl": "https://net22.cc",
+    "description": "Disney+ content mirror from NetMirror",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "en",
+      "hi",
+      "ta"
+    ],
+    "categories": [
+      "movies",
+      "tvseries"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.netmirror.disney.sky"
+  },
+  {
+    "packageName": "dev.akash.stars.netmirror.hotstar",
+    "name": "Hotstar Mirror",
+    "version": 1,
+    "baseUrl": "https://net22.cc",
+    "description": "Hotstar content mirror from NetMirror",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "en",
+      "hi",
+      "ta"
+    ],
+    "categories": [
+      "movies",
+      "tvseries"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.netmirror.hotstar.sky"
+  },
+  {
+    "packageName": "dev.akash.stars.netmirror.netflix",
+    "name": "Netflix Mirror",
+    "version": 1,
+    "baseUrl": "https://net22.cc",
+    "description": "Netflix content mirror from NetMirror",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "en",
+      "hi",
+      "ta"
+    ],
+    "categories": [
+      "movies",
+      "tvseries"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.netmirror.netflix.sky"
+  },
+  {
+    "packageName": "dev.akash.stars.netmirror.prime",
+    "name": "Prime Mirror",
+    "version": 1,
+    "baseUrl": "https://net22.cc",
+    "description": "Prime Video content mirror from NetMirror",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "en",
+      "hi",
+      "ta"
+    ],
+    "categories": [
+      "movies",
+      "tvseries"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.netmirror.prime.sky"
+  },
+  {
     "packageName": "dev.akash.stars.piratestv",
     "name": "PiratesTV",
     "version": 1,
