@@ -192,10 +192,10 @@
             const text = link.text().toLowerCase();
             const isBtn = (link.attr("class") || "").includes("btn");
             if (isBtn && (text.includes("fsl server") || text.includes("fslv2") || text.includes("download file") || text.includes("s3 server") || text.includes("mega server") || text.includes("10gbps"))) {
-                results.push({ url: href, name: "HubCloud", source: qual + " - " + link.text().trim() });
+                results.push({ url: href, name: "HubCloud", quality: qual, info: link.text().trim() });
             } else if (text.includes("pixeldrain") || text.includes("pixel server")) {
                 const idMatch = /\/u\/([a-zA-Z0-9]+)/.exec(href);
-                if (idMatch) results.push({ url: `https://pixeldrain.com/api/file/${idMatch[1]}?download`, name: "PixelDrain", source: qual });
+                if (idMatch) results.push({ url: `https://pixeldrain.com/api/file/${idMatch[1]}?download`, name: "PixelDrain", quality: qual });
             }
         });
         return results;
@@ -373,7 +373,7 @@
                                     episodes.push(new Episode({ name: "Full Movie", season: 1, episode: 1, url: "[]", posterUrl: poster }));
                                 }
                                 let linksArr = JSON.parse(episodes[0].url);
-                                linksArr.push({ source: href, source: qual });
+                                linksArr.push({ source: href, quality: qual });
                                 episodes[0].url = JSON.stringify(linksArr);
                             }
                         }
@@ -413,23 +413,25 @@
                 if (u.includes("hubcloud") || u.includes("gdflix") || u.includes("gdlink")) {
                     const links = await extractHubCloud(u, q);
                     links.forEach(l => {
+                        let sourceName = `${l.name} [${l.quality || q}]`;
+                        if (l.info) sourceName += ` - ${l.info}`;
                         results.push(new StreamResult({
                             url: l.url,
-                            source: `${l.name} - ${l.quality}`,
+                            source: sourceName,
                             headers: CommonHeaders
                         }));
                     });
                 } else {
                     results.push(new StreamResult({
                         url: u,
-                        source: q,
+                        source: q.includes("p") || q === "4K" ? q : `${q} Source`,
                         headers: CommonHeaders
                     }));
                 }
             }
             cb({ success: true, data: results });
-        } catch {
-            cb({ success: false, errorCode: "PARSE_ERROR", message: "Failed to parse streams" });
+        } catch (e) {
+            cb({ success: false, errorCode: "PARSE_ERROR", message: "Failed to parse streams: " + e.message });
         }
     }
 
