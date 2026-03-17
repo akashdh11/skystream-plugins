@@ -1,5 +1,5 @@
 (function() {
-    const BASE_URL = "https://net52.cc";
+    const BASE_URL = "https://net22.cc";
     const PLAY_URL = "https://net52.cc";
     const OTT = "pv";
 
@@ -20,7 +20,7 @@
                     if (Array.isArray(setCookie)) setCookie = setCookie.join("; ");
                     const match = setCookie.match(/t_hash_t=([^;]+)/);
                     if (match) {
-                        cachedCookie = match[1];
+                        cachedCookie = decodeURIComponent(match[1]);
                         lastBypassTime = Date.now();
                         return cachedCookie;
                     }
@@ -44,24 +44,35 @@
     async function getHome(cb) {
         try {
             const cookieStr = await getCookieString();
-            const res = await http_get(`${BASE_URL}/tv/pv/homepage.php`, { ...CommonHeaders, "Referer": `${BASE_URL}/home`, "Cookie": cookieStr });
-            const data = JSON.parse(res.body);
+            const res = await http_get(`${BASE_URL}/home`, { ...CommonHeaders, "Referer": `${BASE_URL}/`, "Cookie": cookieStr });
+            const html = res.body;
             const sections = {};
             
-            if (data.post) {
-                data.post.forEach(cat => {
-                    const title = cat.cate || "Trending";
-                    const items = cat.ids.split(",").map(id => {
-                        if (!id) return null;
-                        return new MultimediaItem({
-                            title: " ",
-                            url: JSON.stringify({ id: id }),
-                            posterUrl: proxyImage(`https://imgcdn.kim/pv/v/${id}.jpg`),
-                            type: "movie"
-                        });
-                    }).filter(i => i !== null);
-                    if (items.length > 0) sections[title] = items;
-                });
+            const rowRegex = /<div[^>]*class="[^"]*lolomoRow[^"]*"[^>]*>([\s\S]*?)(?=<div[^>]*class="[^"]*lolomoRow[^"]*"[^>]*>|$)/g;
+            let rowMatch;
+            while ((rowMatch = rowRegex.exec(html)) !== null) {
+                const rowHtml = rowMatch[1];
+                let title = "Trending";
+                const titleMatch = rowHtml.match(/<div class="row-header-title">([\s\S]*?)<\/div>/) || 
+                             rowHtml.match(/<h2[^>]*>([\s\S]*?)<\/h2>/);
+                if (titleMatch) {
+                    title = titleMatch[1].replace(/<[^>]*>/g, "").trim();
+                }
+                
+                const items = [];
+                const imgRegex = /<img[^>]*class="[^"]*lazy[^"]*"[^>]*data-src="([^"]+)"/g;
+                let imgMatch;
+                while ((imgMatch = imgRegex.exec(rowHtml)) !== null) {
+                    const imgSrc = imgMatch[1];
+                    const id = imgSrc.split("/").pop().split(".")[0];
+                    if (id && !items.some(it => it.url && JSON.parse(it.url).id === id)) {
+                        items.push(new MultimediaItem({
+                            title: " ", url: JSON.stringify({ id: id }),
+                            posterUrl: proxyImage(`https://imgcdn.kim/pv/v/${id}.jpg`), type: "movie"
+                        }));
+                    }
+                }
+                if (items.length > 0) sections[title] = items;
             }
             cb({ success: true, data: sections });
         } catch (e) { cb({ success: false, errorCode: "HOME_ERROR", message: e.message }); }
@@ -134,9 +145,15 @@
     async function loadStreams(dataStr, cb) {
         try {
             const { id, title } = JSON.parse(dataStr);
-            const hash = await bypass();
-            const cookieStr = `t_hash_t=${hash}; ott=${OTT}; hd=on`;
-            const listRes = await http_get(`${BASE_URL}/pv/playlist.php?id=${id}&t=${encodeURIComponent(title)}&tm=${Math.floor(Date.now()/1000)}`, { ...CommonHeaders, "Referer": `${BASE_URL}/home`, "Cookie": cookieStr });
+            const globalHash = await bypass();
+            const cookieStrInitial = `t_hash_t=${globalHash}; ott=${OTT}; hd=on`;
+            const playPostRes = await http_post(`${BASE_URL}/play.php`, { ...CommonHeaders, "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest", "Referer": `${BASE_URL}/`, "Cookie": cookieStrInitial }, `id=${id}`);
+            const { h } = JSON.parse(playPostRes.body);
+            const iframeRes = await http_get(`${PLAY_URL}/play.php?id=${id}&${h}`, { ...CommonHeaders, "Referer": `${BASE_URL}/`, "Cookie": cookieStrInitial });
+            const tokenMatch = iframeRes.body.match(/data-h="([^"]+)"/);
+            const token = tokenMatch ? tokenMatch[1] : "";
+            const playlistUrl = `${PLAY_URL}/pv/playlist.php?id=${id}&t=${encodeURIComponent(title)}&tm=${Math.floor(Date.now()/1000)}&h=${token}`;
+            const listRes = await http_get(playlistUrl, { ...CommonHeaders, "Referer": `${PLAY_URL}/`, "Cookie": cookieStrInitial });
             const playlist = JSON.parse(listRes.body);
             const results = [];
             playlist.forEach(item => {
@@ -146,13 +163,18 @@
                         if (!fullUrl.startsWith("/")) fullUrl = "/" + fullUrl;
                         const finalUrl = PLAY_URL + "/" + fullUrl;
 
+                        const inMatch = src.file.match(/[?&]in=([^&]+)/);
+                        let streamHash = globalHash;
+                        if (inMatch) streamHash = decodeURIComponent(inMatch[1]);
+                        const streamCookieStr = `t_hash_t=${streamHash}; ott=${OTT}; hd=on`;
+
                         const proxifiedUrl = "MAGIC_PROXY_v1" + btoa(finalUrl);
                         results.push(new StreamResult({
                             url: proxifiedUrl, source: `NetMirror [${src.label}]`, type: "hls",
                             headers: { 
                                 "User-Agent": "Mozilla/5.0 (Android) ExoPlayer", 
-                                "Referer": `${BASE_URL}/`, 
-                                "Cookie": cookieStr,
+                                "Referer": `${PLAY_URL}/`, 
+                                "Cookie": streamCookieStr,
                                 "Accept": "*/*",
                                 "Accept-Encoding": "identity",
                                 "Connection": "keep-alive"
