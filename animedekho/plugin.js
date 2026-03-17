@@ -57,16 +57,17 @@
                         console.error(`Empty response for ${cat.name} from ${url}`);
                         return null;
                     }
-                    if (typeof JSDOM === 'undefined') {
-                        throw new Error("JSDOM is not defined in this environment");
-                    }
-                    const doc = new JSDOM(res.body).window.document;
-                    const container = doc.querySelector('.post-lst') || doc.querySelector('.items') || doc.querySelector('.grid-container') || doc.querySelector('#main-content') || doc.querySelector('.swiper-wrapper') || doc;
-                    const items = Array.from(container.querySelectorAll('.post')).length > 0 
-                        ? Array.from(container.querySelectorAll('.post')) 
-                        : Array.from(container.querySelectorAll('article'));
                     
-                    const mappedItems = items.map(el => toMedia(el, cat.type)).filter(Boolean);
+                    // Use parseHtml helper (already async/await friendly in app)
+                    const doc = await parseHtml(res.body);
+                    const container = doc.querySelector('.post-lst') || doc.querySelector('.items') || doc.querySelector('.grid-container') || doc.querySelector('#main-content') || doc.querySelector('.swiper-wrapper') || doc;
+                    
+                    // Optimization: Call querySelectorAll only once
+                    const posts = container.querySelectorAll('.post');
+                    const articles = container.querySelectorAll('article');
+                    const items = posts.length > 0 ? posts : articles;
+                    
+                    const mappedItems = Array.from(items).map(el => toMedia(el, cat.type)).filter(Boolean);
                     
                     const seen = new Set();
                     const uniqueItems = mappedItems.filter(item => {
@@ -98,7 +99,7 @@
         try {
             const baseUrl = getBaseUrl();
             const res = await http_get(`${baseUrl}/?s=${encodeURIComponent(query)}`, headers);
-            const doc = new JSDOM(res.body).window.document;
+            const doc = await parseHtml(res.body);
             const items = Array.from(doc.querySelectorAll('.post, article')).map(el => toMedia(el)).filter(Boolean);
             cb({ success: true, data: items });
         } catch (e) {
@@ -111,7 +112,7 @@
             const media = safeParse(urlStr);
             if (!media) throw new Error("Invalid URL data");
             const res = await http_get(media.url, headers);
-            const doc = new JSDOM(res.body).window.document;
+            const doc = await parseHtml(res.body);
 
             let title = doc.querySelector('h1.entry-title')?.textContent?.trim()?.replace("Watch Online ", "") || doc.querySelector('.title')?.textContent?.trim() || "";
             if (!title) {
@@ -213,7 +214,7 @@
                             const pUrl = `${baseUrl}/player-v1/?id=${encodedId}&server=${srv}`;
                             const pRes = await http_get(pUrl, { ...headers, "Referer": media.url });
                             if (pRes.body && !pRes.body.includes("Page Not Found")) {
-                                const pDoc = new JSDOM(pRes.body).window.document;
+                                const pDoc = await parseHtml(pRes.body);
                                 const iframe = pDoc.querySelector('iframe');
                                 if (iframe && iframe.getAttribute('src')) {
                                     await loadExtractor(iframe.getAttribute('src'), streams);
@@ -227,7 +228,7 @@
                         const trUrl = `${baseUrl}/?trdekho=${i}&trid=${postId}&trtype=${media.mediaType || 0}`;
                         const trRes = await http_get(trUrl, { ...headers, "Referer": media.url });
                         if (trRes.body) {
-                            const trDoc = new JSDOM(trRes.body).window.document;
+                            const trDoc = await parseHtml(trRes.body);
                             const iframe = trDoc.querySelector('iframe');
                             if (iframe && iframe.getAttribute('src')) {
                                 await loadExtractor(iframe.getAttribute('src'), streams);
