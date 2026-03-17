@@ -1,0 +1,16 @@
+{
+  "packageName": "dev.akash.stars.bollyflix",
+  "name": "BollyFlix",
+  "version": 1,
+  "baseUrl": "https://bollyflix.sarl",
+  "description": "BDIX TV Live Channels",
+  "authors": [
+    "Akash"
+  ],
+  "languages": [
+    "hi"
+  ],
+  "categories": [
+    "Movie",  "TvSeries",  "Anime"
+  ]
+}
