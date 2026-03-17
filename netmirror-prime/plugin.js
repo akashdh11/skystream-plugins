@@ -190,9 +190,8 @@
                         const streamHash = inMatch ? decodeURIComponent(inMatch[1]) : globalHash;
                         const streamCookie = `t_hash_t=${streamHash}; ott=${OTT}; hd=on`;
 
-                        const proxifiedUrl = "MAGIC_PROXY_v1" + btoa(finalUrl);
-                        results.push(new StreamResult({
-                            url: proxifiedUrl, source: `NetMirror [${src.label}]`, type: "hls",
+                        const proxifiedUrl = "MAGIC_PROXY_v2" + btoa(JSON.stringify({
+                            url: finalUrl,
                             headers: { 
                                 "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36", 
                                 "Referer": `${PLAY_URL}/`, 
@@ -203,7 +202,15 @@
                                 "Accept": "*/*",
                                 "Accept-Encoding": "identity",
                                 "Connection": "keep-alive"
+                            },
+                            options: {
+                                mirrorHosts: ["net52.cc", "net22.cc", "nm-cdn", "top"],
+                                keepCookies: ["t_hash_t", "ott", "hd"],
+                                referer: "https://net52.cc/"
                             }
+                        }));
+                        results.push(new StreamResult({
+                            url: proxifiedUrl, source: `NetMirror [${src.label}]`, type: "hls", headers: {}
                         }));
                     });
                 }
