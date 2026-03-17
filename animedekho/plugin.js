@@ -7,7 +7,11 @@
      * @property {string} [message]
      */
 
-    const headers = { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" };
+    const headers = { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" };
+    const getBaseUrl = () => {
+        if (typeof manifest !== 'undefined' && manifest.baseUrl) return manifest.baseUrl;
+        return "https://animedekho.app";
+    };
 
     function safeParse(data) {
         if (!data) return null;
@@ -44,10 +48,18 @@
                 { path: "/category/telugu/", name: "Telugu", type: "anime" }
             ];
 
-            const result = {};
-            for (const cat of categories) {
+            const results = await Promise.all(categories.map(async (cat) => {
                 try {
-                    const res = await http_get(`${manifest.baseUrl}${cat.path}`, headers);
+                    const baseUrl = getBaseUrl();
+                    const url = `${baseUrl}${cat.path}`;
+                    const res = await http_get(url, headers);
+                    if (!res || !res.body) {
+                        console.error(`Empty response for ${cat.name} from ${url}`);
+                        return null;
+                    }
+                    if (typeof JSDOM === 'undefined') {
+                        throw new Error("JSDOM is not defined in this environment");
+                    }
                     const doc = new JSDOM(res.body).window.document;
                     const container = doc.querySelector('.post-lst') || doc.querySelector('.items') || doc.querySelector('.grid-container') || doc.querySelector('#main-content') || doc.querySelector('.swiper-wrapper') || doc;
                     const items = Array.from(container.querySelectorAll('.post')).length > 0 
@@ -56,7 +68,6 @@
                     
                     const mappedItems = items.map(el => toMedia(el, cat.type)).filter(Boolean);
                     
-                    // Deduplicate items within the same category
                     const seen = new Set();
                     const uniqueItems = mappedItems.filter(item => {
                         if (seen.has(item.url)) return false;
@@ -64,21 +75,29 @@
                         return true;
                     });
 
-                    if (uniqueItems.length > 0) result[cat.name] = uniqueItems;
+                    if (uniqueItems.length > 0) return { name: cat.name, items: uniqueItems };
                 } catch (e) {
-                    console.error(`Error fetching category ${cat.name}:`, e);
+                    console.error(`Error fetching category ${cat.name} [${cat.path}]: ${e.message}\n${e.stack}`);
                 }
-            }
+                return null;
+            }));
 
-            cb({ success: true, data: result });
+            const finalResult = {};
+            results.filter(Boolean).forEach(res => {
+                finalResult[res.name] = res.items;
+            });
+
+            cb({ success: true, data: finalResult });
         } catch (e) {
+            console.error("Critical getHome Error:", e);
             cb({ success: false, errorCode: "HTTP_ERROR", message: e.message });
         }
     }
 
     async function search(query, cb) {
         try {
-            const res = await http_get(`${manifest.baseUrl}/?s=${encodeURIComponent(query)}`, headers);
+            const baseUrl = getBaseUrl();
+            const res = await http_get(`${baseUrl}/?s=${encodeURIComponent(query)}`, headers);
             const doc = new JSDOM(res.body).window.document;
             const items = Array.from(doc.querySelectorAll('.post, article')).map(el => toMedia(el)).filter(Boolean);
             cb({ success: true, data: items });
@@ -188,9 +207,10 @@
                 if (postId) {
                     const encodedId = btoa(postId);
                     const coreServers = ['vidstream', 'gdm', 'stream-v2', 'stream-v3', 'dood', 'file'];
+                    const baseUrl = getBaseUrl();
                     for (const srv of coreServers) {
                         try {
-                            const pUrl = `${manifest.baseUrl}/player-v1/?id=${encodedId}&server=${srv}`;
+                            const pUrl = `${baseUrl}/player-v1/?id=${encodedId}&server=${srv}`;
                             const pRes = await http_get(pUrl, { ...headers, "Referer": media.url });
                             if (pRes.body && !pRes.body.includes("Page Not Found")) {
                                 const pDoc = new JSDOM(pRes.body).window.document;
@@ -204,7 +224,7 @@
                     
                     // Legacy trid/trdekho discovery
                     for (let i = 0; i <= 10; i++) {
-                        const trUrl = `${manifest.baseUrl}/?trdekho=${i}&trid=${postId}&trtype=${media.mediaType || 0}`;
+                        const trUrl = `${baseUrl}/?trdekho=${i}&trid=${postId}&trtype=${media.mediaType || 0}`;
                         const trRes = await http_get(trUrl, { ...headers, "Referer": media.url });
                         if (trRes.body) {
                             const trDoc = new JSDOM(trRes.body).window.document;
