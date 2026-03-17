@@ -218,6 +218,27 @@
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.moviesdrive.sky"
   },
   {
+    "packageName": "dev.akash.stars.netmirror",
+    "name": "NetflixMirror",
+    "version": 1,
+    "baseUrl": "https://net22.cc",
+    "description": "Multi-platform OTT content scraper (Netflix, Prime, Disney)",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "en",
+      "hi",
+      "ta"
+    ],
+    "categories": [
+      "Movie",
+      "TvSeries",
+      "Anime"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.netmirror.sky"
+  },
+  {
     "packageName": "dev.akash.stars.piratestv",
     "name": "PiratesTV",
     "version": 1,
