@@ -51,7 +51,7 @@
             if (data.post) {
                 data.post.forEach(section => {
                     const title = section.cate;
-                    const items = (section.ids || "").split(",").filter(id => id).map(id => new MultimediaItem({ playbackPolicy: "Internal Player Only",
+                    const items = (section.ids || "").split(",").filter(id => id).map(id => new MultimediaItem({
                         title: " ", url: JSON.stringify({ id: id }),
                         posterUrl: proxyImage(`https://imgcdn.kim/pv/v/${id}.jpg`), type: "movie"
                     }));
@@ -68,7 +68,7 @@
             const url = `${PLAY_URL}/pv/search.php?s=${encodeURIComponent(query)}&t=${Math.floor(Date.now()/1000)}`;
             const res = await http_get(url, { ...CommonHeaders, "Referer": `${BASE_URL}/home`, "Cookie": cookieStr });
             const data = JSON.parse(res.body);
-            const results = (data.searchResult || []).map(item => new MultimediaItem({ playbackPolicy: "Internal Player Only",
+            const results = (data.searchResult || []).map(item => new MultimediaItem({
                 title: item.t, url: JSON.stringify({ id: item.id }),
                 posterUrl: proxyImage(`https://imgcdn.kim/pv/v/${item.id}.jpg`), type: "movie"
             }));
@@ -98,7 +98,7 @@
             } else {
                 episodes.push(new Episode({ name: data.title, season: 1, episode: 1, url: JSON.stringify({ id: id, title: data.title }), posterUrl: proxyImage(`https://imgcdn.kim/pv/v/${id}.jpg`) }));
             }
-            cb({ success: true, data: new MultimediaItem({ playbackPolicy: "Internal Player Only",
+            cb({ success: true, data: new MultimediaItem({
                 title: data.title, url: urlData, posterUrl: proxyImage(`https://imgcdn.kim/pv/v/${id}.jpg`), description: data.desc,
                 type: episodes.length > 1 ? "tvseries" : "movie", year: parseInt(data.year) || undefined, episodes: episodes
             })});
