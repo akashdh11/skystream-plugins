@@ -179,18 +179,18 @@
 
             const mainRes = await http_get(media.url, headers);
             const mainHtml = mainRes.body;
-            const doc = new JSDOM(mainHtml).window.document;
+            const doc = await parseHtml(mainHtml);
 
             // 1. VidStream / Toronites
             try {
                 const res = await http_get(media.url, { "Cookie": "toronites_server=vidstream", ...headers });
-                const torDoc = new JSDOM(res.body).window.document;
+                const torDoc = await parseHtml(res.body);
                 const iframes = Array.from(torDoc.querySelectorAll('iframe.serversel[src]'));
                 for (const iframe of iframes) {
                     const serverUrl = iframe.getAttribute('src');
                     if (serverUrl) {
                         const innerRes = await http_get(serverUrl, headers);
-                        const innerDoc = new JSDOM(innerRes.body).window.document;
+                        const innerDoc = await parseHtml(innerRes.body);
                         const finalIframe = innerDoc.querySelector('iframe[src]');
                         if (finalIframe) {
                             await loadExtractor(finalIframe.getAttribute('src'), streams);
@@ -368,7 +368,7 @@
     async function extractAnimedekhoCo(url, streams) {
         try {
             const res = await http_get(url, headers);
-            const doc = new JSDOM(res.body).window.document;
+            const doc = await parseHtml(res.body);
             const options = Array.from(doc.querySelectorAll('select#serverSelector option'));
             options.forEach(opt => {
                 const val = opt.getAttribute('value');
