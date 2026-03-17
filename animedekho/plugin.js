@@ -80,7 +80,7 @@
         try {
             const res = await http_get(`${manifest.baseUrl}/?s=${encodeURIComponent(query)}`, headers);
             const doc = new JSDOM(res.body).window.document;
-            const items = Array.from(doc.querySelectorAll('ul[data-results] li article')).map(el => toMedia(el)).filter(Boolean);
+            const items = Array.from(doc.querySelectorAll('.post, article')).map(el => toMedia(el)).filter(Boolean);
             cb({ success: true, data: items });
         } catch (e) {
             cb({ success: false, errorCode: "SEARCH_ERROR", message: e.message });
@@ -94,11 +94,11 @@
             const res = await http_get(media.url, headers);
             const doc = new JSDOM(res.body).window.document;
 
-            let title = doc.querySelector('h1.entry-title')?.textContent?.trim()?.replace("Watch Online ", "") || "";
+            let title = doc.querySelector('h1.entry-title')?.textContent?.trim()?.replace("Watch Online ", "") || doc.querySelector('.title')?.textContent?.trim() || "";
             if (!title) {
                 title = doc.querySelector('meta[property="og:title"]')?.getAttribute('content')?.replace("Watch Online ", "")?.split(" Movie")[0] || "No Title";
             }
-            const poster = doc.querySelector('div.post-thumbnail figure img')?.getAttribute('src') || media.poster;
+            const poster = doc.querySelector('div.post-thumbnail figure img')?.getAttribute('data-src') || doc.querySelector('div.post-thumbnail figure img')?.getAttribute('src') || media.poster;
             const plot = doc.querySelector('div.entry-content p')?.textContent?.trim() || "";
             const yearText = doc.querySelector('span.year')?.textContent?.trim();
             const year = yearText ? parseInt(yearText) : null;
