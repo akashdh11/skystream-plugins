@@ -1,10 +1,23 @@
 (function() {
     const BASE_URL = "https://net22.cc";
     const PLAY_URL = "https://net52.cc";
-    const OTT = "hs";
+    const OTT = "dp";
 
     const CommonHeaders = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "Accept-Language": "en-IN,en-US;q=0.9,en;q=0.8",
+        "Cache-Control": "max-age=0",
+        "Connection": "keep-alive",
+        "sec-ch-ua": "\"Not(A:Brand\";v=\"8\", \"Chromium\";v=\"144\", \"Android WebView\";v=\"144\"",
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": "\"Android\"",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "same-origin",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+        "User-Agent": "Mozilla/5.0 (Linux; Android 13; Pixel 5 Build/TQ3A.230901.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/144.0.7559.132 Safari/537.36 /OS.Gatu v3.0",
+        "X-Requested-With": "XMLHttpRequest"
     };
 
     let cachedCookie = "";
@@ -44,31 +57,34 @@
     async function getHome(cb) {
         try {
             const cookieStr = await getCookieString();
-            const res = await http_get(`${BASE_URL}/home`, { ...CommonHeaders, "Referer": `${BASE_URL}/`, "Cookie": cookieStr });
+            const res = await http_get(`${PLAY_URL}/mobile/home?app=1`, { 
+                ...CommonHeaders, 
+                "Referer": `${PLAY_URL}/mobile/home?app=1`, 
+                "Cookie": cookieStr,
+            });
             const html = res.body;
             const sections = {};
             
-            const rowRegex = /<div[^>]*class="[^"]*lolomoRow[^"]*"[^>]*>([\s\S]*?)(?=<div[^>]*class="[^"]*lolomoRow[^"]*"[^>]*>|$)/g;
-            let rowMatch;
-            while ((rowMatch = rowRegex.exec(html)) !== null) {
-                const rowHtml = rowMatch[1];
-                let title = "Trending";
-                const titleMatch = rowHtml.match(/<div class="row-header-title">([\s\S]*?)<\/div>/) || 
-                             rowHtml.match(/<h2[^>]*>([\s\S]*?)<\/h2>/);
-                if (titleMatch) {
-                    title = titleMatch[1].replace(/<[^>]*>/g, "").trim();
-                }
+            // Mobile layout parsing
+            const trayRegex = /<(div|section)[^>]+class="[^"]*(tray-container|top10)[^"]*"[^>]*>([\s\S]*?)(?=<div[^>]+class="[^"]*(tray-container|top10)[^"]*"[^>]*>|$)/g;
+            let trayMatch;
+            while ((trayMatch = trayRegex.exec(html)) !== null) {
+                const trayHtml = trayMatch[3];
+                // Skip style definitions
+                if (trayHtml.includes("{")) continue;
+
+                const titleMatch = trayHtml.match(/<(h2|span)[^>]*>([\s\S]*?)<\/\1>/);
+                const title = titleMatch ? titleMatch[2].replace(/<[^>]*>/g, "").trim() : "Trending";
                 
                 const items = [];
-                const imgRegex = /<img[^>]*class="[^"]*lazy[^"]*"[^>]*data-src="([^"]+)"/g;
-                let imgMatch;
-                while ((imgMatch = imgRegex.exec(rowHtml)) !== null) {
-                    const imgSrc = imgMatch[1];
-                    const id = imgSrc.split("/").pop().split(".")[0];
-                    if (id && !items.some(it => it.url && JSON.parse(it.url).id === id)) {
+                const itemRegex = /data-post="([^"]+)"/g;
+                let itemMatch;
+                while ((itemMatch = itemRegex.exec(trayHtml)) !== null) {
+                    const id = itemMatch[1];
+                    if (id && !items.some(it => JSON.parse(it.url).id === id)) {
                         items.push(new MultimediaItem({
                             title: " ", url: JSON.stringify({ id: id }),
-                            posterUrl: proxyImage(`https://imgcdn.kim/dp/v/${id}.jpg`), type: "movie"
+                            posterUrl: proxyImage(`https://imgcdn.kim/hs/v/${id}.jpg`), type: "movie"
                         }));
                     }
                 }
@@ -81,12 +97,12 @@
     async function search(query, cb) {
         try {
             const cookieStr = await getCookieString();
-            const url = `${BASE_URL}/mobile/hs/search.php?s=${encodeURIComponent(query)}&t=${Math.floor(Date.now()/1000)}`;
+            const url = `${PLAY_URL}/mobile/hs/search.php?s=${encodeURIComponent(query)}&t=${Math.floor(Date.now()/1000)}`;
             const res = await http_get(url, { ...CommonHeaders, "Referer": `${BASE_URL}/home`, "Cookie": cookieStr });
             const data = JSON.parse(res.body);
             const results = (data.searchResult || []).map(item => new MultimediaItem({
                 title: item.t, url: JSON.stringify({ id: item.id }),
-                posterUrl: proxyImage(`https://imgcdn.kim/dp/v/${item.id}.jpg`), type: "movie"
+                posterUrl: proxyImage(`https://imgcdn.kim/hs/v/${item.id}.jpg`), type: "movie"
             }));
             cb({ success: true, data: results });
         } catch (e) { cb({ success: false, errorCode: "SEARCH_ERROR", message: e.message }); }
@@ -96,7 +112,7 @@
         try {
             const { id } = JSON.parse(urlData);
             const cookieStr = await getCookieString();
-            const url = `${BASE_URL}/mobile/hs/post.php?id=${id}&t=${Math.floor(Date.now()/1000)}`;
+            const url = `${PLAY_URL}/mobile/hs/post.php?id=${id}&t=${Math.floor(Date.now()/1000)}`;
             const res = await http_get(url, { ...CommonHeaders, "Referer": `${BASE_URL}/tv/home`, "Cookie": cookieStr });
             const data = JSON.parse(res.body);
             const episodes = [];
@@ -104,7 +120,7 @@
                 data.episodes.forEach(ep => {
                     episodes.push(new Episode({
                         name: ep.t, season: parseInt(ep.s?.replace("S", "")) || 0, episode: parseInt(ep.ep?.replace("E", "")) || 0,
-                        url: JSON.stringify({ id: ep.id, title: ep.t }), posterUrl: proxyImage(`https://imgcdn.kim/dpepimg/150/${ep.id}.jpg`)
+                        url: JSON.stringify({ id: ep.id, title: ep.t }), posterUrl: proxyImage(`https://imgcdn.kim/hsepimg/150/${ep.id}.jpg`)
                     }));
                 });
                 if (data.nextPageShow === 1 && data.nextPageSeason) await fetchEpisodes(id, data.nextPageSeason, 2, episodes, cookieStr);
@@ -112,10 +128,10 @@
                     for (let i = 0; i < data.season.length - 1; i++) await fetchEpisodes(id, data.season[i].id, 1, episodes, cookieStr);
                 }
             } else {
-                episodes.push(new Episode({ name: data.title, season: 1, episode: 1, url: JSON.stringify({ id: id, title: data.title }), posterUrl: proxyImage(`https://imgcdn.kim/dp/v/${id}.jpg`) }));
+                episodes.push(new Episode({ name: data.title, season: 1, episode: 1, url: JSON.stringify({ id: id, title: data.title }), posterUrl: proxyImage(`https://imgcdn.kim/hs/v/${id}.jpg`) }));
             }
             cb({ success: true, data: new MultimediaItem({
-                title: data.title, url: urlData, posterUrl: proxyImage(`https://imgcdn.kim/dp/v/${id}.jpg`), description: data.desc,
+                title: data.title, url: urlData, posterUrl: proxyImage(`https://imgcdn.kim/hs/v/${id}.jpg`), description: data.desc,
                 type: episodes.length > 1 ? "tvseries" : "movie", year: parseInt(data.year) || undefined, episodes: episodes
             })});
         } catch (e) { cb({ success: false, errorCode: "LOAD_ERROR", message: e.message }); }
@@ -125,14 +141,14 @@
         let pg = page;
         while (true) {
             try {
-                const url = `${BASE_URL}/mobile/hs/episodes.php?s=${seasonId}&series=${seriesId}&t=${Math.floor(Date.now()/1000)}&page=${pg}`;
+                const url = `${PLAY_URL}/mobile/hs/episodes.php?s=${seasonId}&series=${seriesId}&t=${Math.floor(Date.now()/1000)}&page=${pg}`;
                 const res = await http_get(url, { ...CommonHeaders, "Cookie": cookieStr });
                 const data = JSON.parse(res.body);
                 if (data.episodes) {
                     data.episodes.forEach(ep => {
                         episodes.push(new Episode({
                             name: ep.t, season: parseInt(ep.s?.replace("S", "")) || 0, episode: parseInt(ep.ep?.replace("E", "")) || 0,
-                            url: JSON.stringify({ id: ep.id, title: ep.t }), posterUrl: proxyImage(`https://imgcdn.kim/dpepimg/150/${ep.id}.jpg`)
+                            url: JSON.stringify({ id: ep.id, title: ep.t }), posterUrl: proxyImage(`https://imgcdn.kim/hsepimg/150/${ep.id}.jpg`)
                         }));
                     });
                 }
@@ -147,13 +163,51 @@
             const { id, title } = JSON.parse(dataStr);
             const globalHash = await bypass();
             const cookieStrInitial = `t_hash_t=${globalHash}; ott=${OTT}; hd=on`;
-            const playPostRes = await http_post(`${BASE_URL}/play.php`, { ...CommonHeaders, "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest", "Referer": `${BASE_URL}/`, "Cookie": cookieStrInitial }, `id=${id}`);
+            const HandshakeHeaders = {
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+                "Referer": `${BASE_URL}/`,
+                "X-Requested-With": "XMLHttpRequest",
+                "Accept": "application/json, text/plain, */*",
+                "Connection": "keep-alive"
+            };
+
+            const playPostRes = await http_post(`${BASE_URL}/play.php`, { 
+                ...HandshakeHeaders, "Content-Type": "application/x-www-form-urlencoded", "Cookie": cookieStrInitial 
+            }, `id=${id}`);
             const { h } = JSON.parse(playPostRes.body);
-            const iframeRes = await http_get(`${PLAY_URL}/play.php?id=${id}&${h}`, { ...CommonHeaders, "Referer": `${BASE_URL}/`, "Cookie": cookieStrInitial });
+
+            const headers2 = {
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                "Accept-Language": "en-GB,en;q=0.9",
+                "Connection": "keep-alive",
+                "Host": "net52.cc",
+                "Referer": `${BASE_URL}/`,
+                "sec-ch-ua": "\"Chromium\";v=\"142\", \"Brave\";v=\"142\", \"Not_A Brand\";v=\"99\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "Sec-Fetch-Dest": "iframe",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "cross-site",
+                "Sec-Fetch-Storage-Access": "none",
+                "Sec-Fetch-User": "?1",
+                "Sec-GPC": "1",
+                "Upgrade-Insecure-Requests": "1",
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+                "Cookie": cookieStrInitial
+            };
+
+            const iframeRes = await http_get(`${PLAY_URL}/play.php?id=${id}&${h}`, headers2);
             const tokenMatch = iframeRes.body.match(/data-h="([^"]+)"/);
             const token = tokenMatch ? tokenMatch[1] : "";
+
+            const playlistHeaders = {
+                ...HandshakeHeaders,
+                "Referer": `${PLAY_URL}/`,
+                "Cookie": cookieStrInitial
+            };
+
             const playlistUrl = `${PLAY_URL}/mobile/hs/playlist.php?id=${id}&t=${encodeURIComponent(title)}&tm=${Math.floor(Date.now()/1000)}&h=${token}`;
-            const listRes = await http_get(playlistUrl, { ...CommonHeaders, "Referer": `${PLAY_URL}/`, "Cookie": cookieStrInitial });
+            const listRes = await http_get(playlistUrl, playlistHeaders);
             const playlist = JSON.parse(listRes.body);
             const results = [];
             playlist.forEach(item => {
@@ -164,17 +218,19 @@
                         const finalUrl = PLAY_URL + "/" + fullUrl;
 
                         const inMatch = src.file.match(/[?&]in=([^&]+)/);
-                        let streamHash = globalHash;
-                        if (inMatch) streamHash = decodeURIComponent(inMatch[1]);
-                        const streamCookieStr = `t_hash_t=${streamHash}; ott=${OTT}; hd=on`;
+                        const streamHash = inMatch ? decodeURIComponent(inMatch[1]) : globalHash;
+                        const streamCookie = `t_hash_t=${streamHash}; ott=${OTT}; hd=on`;
 
                         const proxifiedUrl = "MAGIC_PROXY_v1" + btoa(finalUrl);
                         results.push(new StreamResult({
                             url: proxifiedUrl, source: `NetMirror [${src.label}]`, type: "hls",
                             headers: { 
-                                "User-Agent": "Mozilla/5.0 (Android) ExoPlayer", 
+                                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36", 
                                 "Referer": `${PLAY_URL}/`, 
-                                "Cookie": streamCookieStr,
+                                "Cookie": streamCookie,
+                                "sec-ch-ua": "\"Chromium\";v=\"142\", \"Brave\";v=\"142\", \"Not_A Brand\";v=\"99\"",
+                                "sec-ch-ua-mobile": "?0",
+                                "sec-ch-ua-platform": "\"Linux\"",
                                 "Accept": "*/*",
                                 "Accept-Encoding": "identity",
                                 "Connection": "keep-alive"

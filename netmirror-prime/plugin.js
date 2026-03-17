@@ -44,35 +44,19 @@
     async function getHome(cb) {
         try {
             const cookieStr = await getCookieString();
-            const res = await http_get(`${BASE_URL}/home`, { ...CommonHeaders, "Referer": `${BASE_URL}/`, "Cookie": cookieStr });
-            const html = res.body;
+            const res = await http_get(`${PLAY_URL}/pv/homepage.php`, { ...CommonHeaders, "Referer": `${BASE_URL}/home`, "Cookie": cookieStr });
+            const data = JSON.parse(res.body);
             const sections = {};
             
-            const rowRegex = /<div[^>]*class="[^"]*lolomoRow[^"]*"[^>]*>([\s\S]*?)(?=<div[^>]*class="[^"]*lolomoRow[^"]*"[^>]*>|$)/g;
-            let rowMatch;
-            while ((rowMatch = rowRegex.exec(html)) !== null) {
-                const rowHtml = rowMatch[1];
-                let title = "Trending";
-                const titleMatch = rowHtml.match(/<div class="row-header-title">([\s\S]*?)<\/div>/) || 
-                             rowHtml.match(/<h2[^>]*>([\s\S]*?)<\/h2>/);
-                if (titleMatch) {
-                    title = titleMatch[1].replace(/<[^>]*>/g, "").trim();
-                }
-                
-                const items = [];
-                const imgRegex = /<img[^>]*class="[^"]*lazy[^"]*"[^>]*data-src="([^"]+)"/g;
-                let imgMatch;
-                while ((imgMatch = imgRegex.exec(rowHtml)) !== null) {
-                    const imgSrc = imgMatch[1];
-                    const id = imgSrc.split("/").pop().split(".")[0];
-                    if (id && !items.some(it => it.url && JSON.parse(it.url).id === id)) {
-                        items.push(new MultimediaItem({
-                            title: " ", url: JSON.stringify({ id: id }),
-                            posterUrl: proxyImage(`https://imgcdn.kim/pv/v/${id}.jpg`), type: "movie"
-                        }));
-                    }
-                }
-                if (items.length > 0) sections[title] = items;
+            if (data.post) {
+                data.post.forEach(section => {
+                    const title = section.cate;
+                    const items = (section.ids || "").split(",").filter(id => id).map(id => new MultimediaItem({
+                        title: " ", url: JSON.stringify({ id: id }),
+                        posterUrl: proxyImage(`https://imgcdn.kim/pv/v/${id}.jpg`), type: "movie"
+                    }));
+                    if (items.length > 0) sections[title] = items;
+                });
             }
             cb({ success: true, data: sections });
         } catch (e) { cb({ success: false, errorCode: "HOME_ERROR", message: e.message }); }
@@ -81,7 +65,7 @@
     async function search(query, cb) {
         try {
             const cookieStr = await getCookieString();
-            const url = `${BASE_URL}/pv/search.php?s=${encodeURIComponent(query)}&t=${Math.floor(Date.now()/1000)}`;
+            const url = `${PLAY_URL}/pv/search.php?s=${encodeURIComponent(query)}&t=${Math.floor(Date.now()/1000)}`;
             const res = await http_get(url, { ...CommonHeaders, "Referer": `${BASE_URL}/home`, "Cookie": cookieStr });
             const data = JSON.parse(res.body);
             const results = (data.searchResult || []).map(item => new MultimediaItem({
@@ -96,7 +80,7 @@
         try {
             const { id } = JSON.parse(urlData);
             const cookieStr = await getCookieString();
-            const url = `${BASE_URL}/pv/post.php?id=${id}&t=${Math.floor(Date.now()/1000)}`;
+            const url = `${PLAY_URL}/pv/post.php?id=${id}&t=${Math.floor(Date.now()/1000)}`;
             const res = await http_get(url, { ...CommonHeaders, "Referer": `${BASE_URL}/tv/home`, "Cookie": cookieStr });
             const data = JSON.parse(res.body);
             const episodes = [];
@@ -104,7 +88,7 @@
                 data.episodes.forEach(ep => {
                     episodes.push(new Episode({
                         name: ep.t, season: parseInt(ep.s?.replace("S", "")) || 0, episode: parseInt(ep.ep?.replace("E", "")) || 0,
-                        url: JSON.stringify({ id: ep.id, title: ep.t }), posterUrl: proxyImage(`https://imgcdn.kim/pvepimg/150/${ep.id}.jpg`)
+                        url: JSON.stringify({ id: ep.id, title: ep.t }), posterUrl: `https://imgcdn.kim/pvepimg/150/${ep.id}.jpg`
                     }));
                 });
                 if (data.nextPageShow === 1 && data.nextPageSeason) await fetchEpisodes(id, data.nextPageSeason, 2, episodes, cookieStr);
@@ -125,14 +109,14 @@
         let pg = page;
         while (true) {
             try {
-                const url = `${BASE_URL}/pv/episodes.php?s=${seasonId}&series=${seriesId}&t=${Math.floor(Date.now()/1000)}&page=${pg}`;
+                const url = `${PLAY_URL}/pv/episodes.php?s=${seasonId}&series=${seriesId}&t=${Math.floor(Date.now()/1000)}&page=${pg}`;
                 const res = await http_get(url, { ...CommonHeaders, "Cookie": cookieStr });
                 const data = JSON.parse(res.body);
                 if (data.episodes) {
                     data.episodes.forEach(ep => {
                         episodes.push(new Episode({
                             name: ep.t, season: parseInt(ep.s?.replace("S", "")) || 0, episode: parseInt(ep.ep?.replace("E", "")) || 0,
-                            url: JSON.stringify({ id: ep.id, title: ep.t }), posterUrl: proxyImage(`https://imgcdn.kim/pvepimg/150/${ep.id}.jpg`)
+                            url: JSON.stringify({ id: ep.id, title: ep.t }), posterUrl: `https://imgcdn.kim/pvepimg/150/${ep.id}.jpg`
                         }));
                     });
                 }
@@ -147,13 +131,52 @@
             const { id, title } = JSON.parse(dataStr);
             const globalHash = await bypass();
             const cookieStrInitial = `t_hash_t=${globalHash}; ott=${OTT}; hd=on`;
-            const playPostRes = await http_post(`${BASE_URL}/play.php`, { ...CommonHeaders, "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest", "Referer": `${BASE_URL}/`, "Cookie": cookieStrInitial }, `id=${id}`);
+            const HandshakeHeaders = {
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+                "Referer": `${BASE_URL}/`,
+                "X-Requested-With": "XMLHttpRequest",
+                "Accept": "application/json, text/plain, */*",
+                "Connection": "keep-alive"
+            };
+
+            const playPostRes = await http_post(`${BASE_URL}/play.php`, { 
+                ...HandshakeHeaders, "Content-Type": "application/x-www-form-urlencoded", "Cookie": cookieStrInitial 
+            }, `id=${id}`);
             const { h } = JSON.parse(playPostRes.body);
-            const iframeRes = await http_get(`${PLAY_URL}/play.php?id=${id}&${h}`, { ...CommonHeaders, "Referer": `${BASE_URL}/`, "Cookie": cookieStrInitial });
+
+            const headers2 = {
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                "Accept-Language": "en-GB,en;q=0.9",
+                "Connection": "keep-alive",
+                "Host": "net52.cc",
+                "Referer": `${BASE_URL}/`,
+                "sec-ch-ua": "\"Chromium\";v=\"142\", \"Brave\";v=\"142\", \"Not_A Brand\";v=\"99\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Linux\"",
+                "Sec-Fetch-Dest": "iframe",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "cross-site",
+                "Sec-Fetch-Storage-Access": "none",
+                "Sec-Fetch-User": "?1",
+                "Sec-GPC": "1",
+                "Upgrade-Insecure-Requests": "1",
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+                "Cookie": cookieStrInitial
+            };
+
+            const iframeRes = await http_get(`${PLAY_URL}/play.php?id=${id}&${h}`, headers2);
             const tokenMatch = iframeRes.body.match(/data-h="([^"]+)"/);
             const token = tokenMatch ? tokenMatch[1] : "";
+            if (!token) throw new Error("Handshake failed: token not found");
+
+            const playlistHeaders = {
+                ...HandshakeHeaders,
+                "Referer": `${PLAY_URL}/`,
+                "Cookie": cookieStrInitial
+            };
+
             const playlistUrl = `${PLAY_URL}/pv/playlist.php?id=${id}&t=${encodeURIComponent(title)}&tm=${Math.floor(Date.now()/1000)}&h=${token}`;
-            const listRes = await http_get(playlistUrl, { ...CommonHeaders, "Referer": `${PLAY_URL}/`, "Cookie": cookieStrInitial });
+            const listRes = await http_get(playlistUrl, playlistHeaders);
             const playlist = JSON.parse(listRes.body);
             const results = [];
             playlist.forEach(item => {
@@ -164,17 +187,19 @@
                         const finalUrl = PLAY_URL + "/" + fullUrl;
 
                         const inMatch = src.file.match(/[?&]in=([^&]+)/);
-                        let streamHash = globalHash;
-                        if (inMatch) streamHash = decodeURIComponent(inMatch[1]);
-                        const streamCookieStr = `t_hash_t=${streamHash}; ott=${OTT}; hd=on`;
+                        const streamHash = inMatch ? decodeURIComponent(inMatch[1]) : globalHash;
+                        const streamCookie = `t_hash_t=${streamHash}; ott=${OTT}; hd=on`;
 
                         const proxifiedUrl = "MAGIC_PROXY_v1" + btoa(finalUrl);
                         results.push(new StreamResult({
                             url: proxifiedUrl, source: `NetMirror [${src.label}]`, type: "hls",
                             headers: { 
-                                "User-Agent": "Mozilla/5.0 (Android) ExoPlayer", 
+                                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36", 
                                 "Referer": `${PLAY_URL}/`, 
-                                "Cookie": streamCookieStr,
+                                "Cookie": streamCookie,
+                                "sec-ch-ua": "\"Chromium\";v=\"142\", \"Brave\";v=\"142\", \"Not_A Brand\";v=\"99\"",
+                                "sec-ch-ua-mobile": "?0",
+                                "sec-ch-ua-platform": "\"Linux\"",
                                 "Accept": "*/*",
                                 "Accept-Encoding": "identity",
                                 "Connection": "keep-alive"
