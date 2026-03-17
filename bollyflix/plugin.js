@@ -30,6 +30,15 @@
         return "";
     }
 
+    function checkIsSeries(title, url) {
+        const t = (title || "").toLowerCase();
+        const u = (url || "").toLowerCase();
+        return t.includes("series") ||
+               u.includes("/series/") ||
+               u.includes("-season-") ||
+               u.includes("-series-");
+    }
+
     function toSearchResult(el) {
         const a = el.querySelector('a');
         if (!a) return null;
@@ -39,11 +48,15 @@
         const img = el.querySelector('img');
         const posterUrl = img?.getAttribute('src') || "";
 
-        return new MultimediaItem({
+        const isSeries = checkIsSeries(title, href);
+        // console.log(`[Bollyflix] Home/Search detection: ${title} -> ${isSeries ? 'tvseries' : 'movie'}`);
+
+        return  new MultimediaItem({
             title: title,
             url: href,
             posterUrl: posterUrl,
-            type: "movie" // Default, will refine in load()
+            type: isSeries ? "tvseries" : "movie",
+            contentType: isSeries ? "tvseries" : "movie"
         });
     }
 
@@ -100,8 +113,9 @@
             let posterUrl = doc.querySelector('meta[property="og:image"]')?.getAttribute('content') || "";
             let description = doc.querySelector('span#summary')?.textContent?.trim() || "";
             
-            const isSeries = title.toLowerCase().includes("series") || url.includes("web-series");
-            const tvType = isSeries ? "series" : "movie";
+            const isSeries = checkIsSeries(title, url);
+            const tvType = isSeries ? "tvseries" : "movie";
+            console.log(`[Bollyflix] load detection: ${title} -> ${tvType}`);
             
             const imdbAnchor = doc.querySelector('div.imdb_left > a');
             const imdbUrl = imdbAnchor?.getAttribute('href');
@@ -111,7 +125,7 @@
                 const imdbId = imdbUrl.split('title/')[1]?.split('/')[0];
                 if (imdbId) {
                     try {
-                        const metaRes = await http_get(`${CINEMETA_URL}/${tvType}/${imdbId}.json`);
+                        const metaRes = await http_get(`${CINEMETA_URL}/${isSeries ? 'series' : 'movie'}/${imdbId}.json`);
                         const metaJson = JSON.parse(metaRes.body);
                         if (metaJson.meta) {
                             metadata = metaJson.meta;
@@ -122,56 +136,132 @@
                 }
             }
 
-            const item = new MultimediaItem({
+            // Fallback values to prevent ReferenceErrors
+            const fallbackYear = metadata?.year ? parseInt(metadata.year) : 0;
+            const fallbackScore = metadata?.imdbRating ? parseFloat(metadata.imdbRating) : 0;
+            const fallbackGenres = metadata?.genre || [];
+            const fallbackCast = (metadata?.cast || []).map(name => ({ name: name }));
+
+            const item = {
                 title: metadata?.name || title,
                 url: url,
                 posterUrl: metadata?.poster || posterUrl,
                 bannerUrl: metadata?.background || posterUrl,
                 description: metadata?.description || description,
                 type: tvType,
-                year: metadata?.year ? parseInt(metadata.year) : null,
-                score: metadata?.imdbRating ? parseFloat(metadata.imdbRating) / 10 : null,
-                genres: metadata?.genre || [],
-                cast: (metadata?.cast || []).map(name => new Actor({ name: name }))
-            });
+                contentType: tvType,
+                year: fallbackYear,
+                score: fallbackScore,
+                genres: fallbackGenres,
+                cast: fallbackCast,
+                episodes: []
+            };
 
             if (isSeries) {
-                const episodes = [];
-                const buttons = Array.from(doc.querySelectorAll('a.maxbutton-download-links, a.dl, a.btnn'));
+                console.log("[Bollyflix] Parsing series episodes...");
+                const episodesMap = {};
+                // Deep scan of entry-content to handle nested containers
+                const content = doc.querySelector('.entry-content');
+                if (!content) throw new Error("Could not find .entry-content container");
                 
-                for (const btn of buttons) {
-                    let link = btn.getAttribute('href');
-                    if (link.includes('id=')) {
-                        const id = link.split('id=')[1];
-                        link = await bypass(id);
+                // Find all potential headers and buttons in document order using simple selector for Dart HTML compatibility
+                const allElements = Array.from(content.querySelectorAll('*')).filter(el => {
+                    const tag = el.tagName ? el.tagName.toUpperCase() : '';
+                    return ['H1', 'H2', 'H3', 'H4', 'H5', 'P', 'A'].includes(tag);
+                });
+                
+                let currentSeasonNum = 1;
+                const buttonTasks = [];
+
+                const checkSeasonText = (txt) => {
+                    const sMatch = (txt || "").match(/(?:Season |S)(\d+)/i);
+                    return sMatch ? parseInt(sMatch[1]) : null;
+                };
+
+                allElements.forEach((el) => {
+                    const tag = el.tagName || "";
+                    const c = el.className || "";
+                    const txt = el.textContent || "";
+                    
+                    const sNum = checkSeasonText(txt);
+                    if (sNum && tag.toUpperCase().startsWith('H')) {
+                        currentSeasonNum = sNum;
                     }
-                    
-                    const seasonText = btn.parentElement?.previousElementSibling?.textContent || "";
-                    const sMatch = seasonText.match(/(?:Season |S)(\d+)/i);
-                    const seasonNum = sMatch ? parseInt(sMatch[1]) : 1;
-                    
-                    try {
-                        const sRes = await http_get(link);
-                        const sDoc = await parseHtml(sRes.body);
-                        const epLinks = Array.from(sDoc.querySelectorAll('h3 > a'))
-                            .filter(a => !a.textContent.toLowerCase().includes("zip"));
+
+                    // Check if the element is a button
+                    if (tag.toUpperCase() === 'A' && (c.includes('maxbutton') || c.includes('dl') || c.includes('btnn'))) {
+                        const btnText = txt.toLowerCase();
+                        
+                        if (btnText.includes('download') || btnText.includes('links') || btnText.includes('view') || btnText.includes('click')) {
+                            const seasonAtPoint = checkSeasonText(txt) || currentSeasonNum;
+                            let link = el.getAttribute('href');
                             
-                        epLinks.forEach((a, idx) => {
-                            episodes.push(new Episode({
-                                name: a.textContent.trim() || `Episode ${idx + 1}`,
-                                url: a.getAttribute('href'),
-                                season: seasonNum,
-                                episode: idx + 1
-                            }));
-                        });
-                    } catch (e) {
-                        console.error("Season Load Error:", e);
+                            if (link && link.startsWith('http')) {
+                                buttonTasks.push((async (sNum, bUrl, bText) => {
+                                    try {
+                                        if (bUrl.includes('id=')) {
+                                            const id = bUrl.split('id=')[1];
+                                            bUrl = await bypass(id);
+                                        }
+                                        
+                                        const sRes = await http_get(bUrl);
+                                        const sDoc = await parseHtml(sRes.body);
+                                        const epLinks = Array.from(sDoc.querySelectorAll('a'))
+                                            .filter(a => {
+                                                const text = a.textContent.toLowerCase();
+                                                const href = a.getAttribute('href') || "";
+                                                return !text.includes("zip") && !text.includes("elinks") && href.startsWith('http');
+                                            });
+                                            
+                                        const quality = extractQuality(bText) || extractQuality(el.parentElement?.textContent || "");
+                                
+                                epLinks.forEach((a, idx) => {
+                                    const epText = a.textContent.trim();
+                                    const epMatch = epText.match(/(?:Episode |E|Ep |Ep)(\d+)/i);
+                                    const epNum = epMatch ? parseInt(epMatch[1]) : (idx + 1);
+                                    
+                                    const key = `${sNum}-${epNum}`;
+                                    if (!episodesMap[key]) {
+                                        episodesMap[key] = {
+                                            name: epText || `Episode ${epNum}`,
+                                            urls: [],
+                                            season: sNum,
+                                            episode: epNum
+                                        };
+                                    }
+                                    const href = a.getAttribute('href');
+                                    if (!episodesMap[key].urls.some(u => u.url === href)) {
+                                        episodesMap[key].urls.push({
+                                            url: href,
+                                            quality: quality
+                                        });
+                                    }
+                                });
+                                    } catch (e) {
+                                        console.error("Button processing error:", e);
+                                    }
+                                })(seasonAtPoint, link, el.textContent));
+                            }
+                        }
                     }
-                }
+                });
+
+                await Promise.all(buttonTasks);
+
+                const episodes = Object.values(episodesMap).map(ep => ({
+                    name: ep.name,
+                    url: JSON.stringify(ep.urls),
+                    season: ep.season,
+                    episode: ep.episode
+                }));
+
+                // Sort episodes by season and then episode number
+                episodes.sort((a, b) => (a.season - b.season) || (a.episode - b.episode));
+
                 if (metadata?.videos) {
-                    const epMap = {};
+                    const thumbMap = {};
                     metadata.videos.forEach(v => {
-                        epMap[`${v.season}-${v.episode}`] = {
+                        thumbMap[`${v.season}-${v.episode}`] = {
                             thumbnail: v.thumbnail,
                             name: v.name || v.title,
                             description: v.overview
@@ -179,7 +269,7 @@
                     });
                     
                     episodes.forEach(ep => {
-                        const info = epMap[`${ep.season}-${ep.episode}`];
+                        const info = thumbMap[`${ep.season}-${ep.episode}`];
                         if (info) {
                             ep.posterUrl = info.thumbnail;
                             ep.name = info.name || ep.name;
@@ -188,11 +278,14 @@
                     });
                 }
                 item.episodes = episodes;
+                console.log(`[Bollyflix] total episodes parsed: ${episodes.length}`);
             } else {
-                const dlButtons = Array.from(doc.querySelectorAll('a.dl'));
+                const dlButtons = Array.from(doc.querySelectorAll('a.dl, a.maxbutton-download-links, a.maxbutton-download-link'));
+                console.log(`[Bollyflix] movie buttons found: ${dlButtons.length}`);
                 const movieLinks = [];
                 for (const btn of dlButtons) {
                     let link = btn.getAttribute('href');
+                    if (!link) continue;
                     if (link.includes('id=')) {
                         const id = link.split('id=')[1];
                         link = await bypass(id);
@@ -202,19 +295,23 @@
                     movieLinks.push({ url: link, quality: quality });
                 }
                 
-                item.episodes = [new Episode({
+                item.episodes = [{
                     name: "Play Movie",
-                    url: JSON.stringify(movieLinks), // Store objects for loadStreams
+                    url: JSON.stringify(movieLinks),
                     season: 1,
                     episode: 1
-                })];
+                }];
+                console.log(`[Bollyflix] movie links populated: ${movieLinks.length}`);
             }
 
+            console.log(`[Bollyflix] Load SUCCESS: ${item.title} (${item.type}) with ${item.episodes.length} episodes`);
             cb({ success: true, data: item });
         } catch (e) {
+            console.error("Load Error:", e);
             cb({ success: false, message: e.message });
         }
     }
+
 
     function extractQuality(text) {
         if (!text) return "";
@@ -279,13 +376,13 @@
                 if (!href) continue;
 
                 const quality = extractQuality(fileName);
-                const sourceSuffix = quality ? ` [${quality}]` : "";
+                const qualitySuffix = quality ? ` [${quality}]` : "";
 
                 if (text.includes("DIRECT") || text.includes("FSL V2") || text.includes("CLOUD")) {
-                    sourceName = text.trim();
+                    const sourceName = text.trim();
                     streams.push(new StreamResult({
                         url: href,
-                        source: `${sourceName}${sourceSuffix} (${fileSize})`,
+                        source: `${sourceName}${qualitySuffix} (${fileSize})`,
                         headers: DEFAULT_HEADERS
                     }));
                 } else if (text.includes("FAST CLOUD")) {
@@ -297,7 +394,7 @@
                         if (dlink) {
                             streams.push(new StreamResult({
                                 url: dlink,
-                                source: "FastCloud",
+                                source: `FastCloud${qualitySuffix}`,
                                 headers: DEFAULT_HEADERS
                             }));
                         }
@@ -306,7 +403,7 @@
                     const id = href.split('/').pop();
                     streams.push(new StreamResult({
                         url: `https://pixeldrain.com/api/file/${id}?download`,
-                        source: `Pixeldrain${sourceSuffix} (${fileSize})`,
+                        source: `Pixeldrain${qualitySuffix} (${fileSize})`,
                         headers: DEFAULT_HEADERS
                     }));
                 }
@@ -315,6 +412,7 @@
             console.error("GDFlix Extraction Error:", e);
         }
     }
+
 
     globalThis.getHome = getHome;
     globalThis.search = search;
