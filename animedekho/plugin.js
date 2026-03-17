@@ -19,12 +19,9 @@
         const lnk = element.querySelector('a.lnk-blk') || element.querySelector('a.watch-btn') || element.querySelector('a.fa-play-circle') || element.querySelector('a');
         if (!lnk) return null;
         const href = lnk.getAttribute('href');
-        const title = element.querySelector('header h2')?.textContent?.trim() || element.querySelector('.entry-title')?.textContent?.trim() || "Untitled";
+        const title = element.querySelector('.entry-title')?.textContent?.trim() || element.querySelector('header h2')?.textContent?.trim() || element.querySelector('.title')?.textContent?.trim() || "Untitled";
         const img = element.querySelector('div.post-thumbnail figure img') || element.querySelector('figure img') || element.querySelector('img');
-        let poster = img?.getAttribute('src');
-        if (poster?.startsWith('data:image')) {
-            poster = img?.getAttribute('data-lazy-src') || img?.getAttribute('data-src');
-        }
+        let poster = img?.getAttribute('data-src') || img?.getAttribute('data-lazy-src') || img?.getAttribute('src');
 
         return new MultimediaItem({
             title: title,
@@ -52,9 +49,9 @@
                 try {
                     const res = await http_get(`${manifest.baseUrl}${cat.path}`, headers);
                     const doc = new JSDOM(res.body).window.document;
-                    const container = doc.querySelector('.post-lst') || doc.querySelector('.items') || doc.querySelector('.grid-container') || doc.querySelector('#main-content') || doc;
-                    const items = Array.from(container.querySelectorAll('article.post')).length > 0 
-                        ? Array.from(container.querySelectorAll('article.post')) 
+                    const container = doc.querySelector('.post-lst') || doc.querySelector('.items') || doc.querySelector('.grid-container') || doc.querySelector('#main-content') || doc.querySelector('.swiper-wrapper') || doc;
+                    const items = Array.from(container.querySelectorAll('.post')).length > 0 
+                        ? Array.from(container.querySelectorAll('.post')) 
                         : Array.from(container.querySelectorAll('article'));
                     
                     const mappedItems = items.map(el => toMedia(el, cat.type)).filter(Boolean);
