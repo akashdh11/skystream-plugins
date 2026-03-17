@@ -139,10 +139,21 @@
             playlist.forEach(item => {
                 if (item.sources) {
                     item.sources.forEach(src => {
-                        const proxifiedUrl = "MAGIC_PROXY_v1" + btoa(PLAY_URL + src.file);
+                        let fullUrl = src.file.replace("/tv/", "/");
+                        if (!fullUrl.startsWith("/")) fullUrl = "/" + fullUrl;
+                        const finalUrl = PLAY_URL + "/" + fullUrl;
+
+                        const proxifiedUrl = "MAGIC_PROXY_v1" + btoa(finalUrl);
                         results.push(new StreamResult({
                             url: proxifiedUrl, source: `NetMirror [${src.label}]`, type: "hls",
-                            headers: { "User-Agent": "Mozilla/5.0 (Android) ExoPlayer", "Referer": `${PLAY_URL}/`, "Cookie": "hd=on" }
+                            headers: { 
+                                "User-Agent": "Mozilla/5.0 (Android) ExoPlayer", 
+                                "Referer": `${PLAY_URL}/`, 
+                                "Cookie": cookieStr,
+                                "Accept": "*/*",
+                                "Accept-Encoding": "identity",
+                                "Connection": "keep-alive"
+                            }
                         }));
                     });
                 }

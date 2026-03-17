@@ -245,10 +245,13 @@
             playlist.forEach(item => {
                 if (item.sources) {
                     item.sources.forEach(src => {
-                        let finalUrl = PLAY_URL + src.file;
+                        // Match netmirror.js cleanup: remove /tv/ and ensure double slash after domain if needed
+                        // it does source.file.replace("/tv/", "/"); then PLAY_URL + "/" + fullUrl;
+                        let fullUrl = src.file.replace("/tv/", "/");
+                        if (!fullUrl.startsWith("/")) fullUrl = "/" + fullUrl;
+                        let finalUrl = PLAY_URL + "/" + fullUrl; // Result is net52.cc//hls/...
                         
                         // Use MAGIC_PROXY_v1 to fix the 19s audio-only issue
-                        // This wraps the M3U8 so segments go through the local proxy with hd=on
                         const proxifiedUrl = "MAGIC_PROXY_v1" + btoa(finalUrl);
 
                         results.push(new StreamResult({
@@ -258,7 +261,10 @@
                             headers: {
                                 "User-Agent": "Mozilla/5.0 (Android) ExoPlayer",
                                 "Referer": `${PLAY_URL}/`,
-                                "Cookie": "hd=on"
+                                "Cookie": cookieStr,
+                                "Accept": "*/*",
+                                "Accept-Encoding": "identity",
+                                "Connection": "keep-alive"
                             }
                         }));
                     });
