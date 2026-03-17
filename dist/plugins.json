@@ -94,6 +94,25 @@
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.bdixtv.sky"
   },
   {
+    "packageName": "dev.akash.stars.bollyflix",
+    "name": "BollyFlix",
+    "version": 1,
+    "baseUrl": "https://bollyflix.sarl",
+    "description": "BDIX TV Live Channels",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "hi"
+    ],
+    "categories": [
+      "Movie",
+      "TvSeries",
+      "Anime"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.bollyflix.sky"
+  },
+  {
     "packageName": "dev.akash.stars.darktv",
     "name": "DARK TV",
     "version": 1,
