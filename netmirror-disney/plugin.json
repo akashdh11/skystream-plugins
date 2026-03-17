@@ -1,0 +1,10 @@
+{
+  "packageName": "dev.akash.stars.netmirror.disney",
+  "name": "Disney Mirror",
+  "version": 1,
+  "baseUrl": "https://net22.cc",
+  "description": "Disney+ content mirror from NetMirror",
+  "authors": ["Akash"],
+  "languages": ["en", "hi", "ta"],
+  "categories": ["movies", "tvseries"]
+}
