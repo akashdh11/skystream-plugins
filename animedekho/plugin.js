@@ -182,81 +182,88 @@
             const doc = await parseHtml(mainHtml);
 
             // 1. VidStream / Toronites
-            try {
-                const res = await http_get(media.url, { "Cookie": "toronites_server=vidstream", ...headers });
-                const torDoc = await parseHtml(res.body);
-                const iframes = Array.from(torDoc.querySelectorAll('iframe.serversel[src]'));
-                for (const iframe of iframes) {
-                    const serverUrl = iframe.getAttribute('src');
-                    if (serverUrl) {
-                        const innerRes = await http_get(serverUrl, headers);
-                        const innerDoc = await parseHtml(innerRes.body);
-                        const finalIframe = innerDoc.querySelector('iframe[src]');
-                        if (finalIframe) {
-                            await loadExtractor(finalIframe.getAttribute('src'), streams);
-                        }
-                    }
-                }
-            } catch (e) {}
-
-            // 2. ID-based Discovery (Try various servers)
-            try {
-                const bodyClass = doc.body.className;
-                let postId = bodyClass.match(/(?:term|postid)-(\d+)/)?.[1];
-                if (!postId) postId = mainHtml.match(/postid-(\d+)/)?.[1];
-
-                if (postId) {
-                    const encodedId = btoa(postId);
-                    const coreServers = ['vidstream', 'gdm', 'stream-v2', 'stream-v3', 'dood', 'file'];
-                    const baseUrl = getBaseUrl();
-                    for (const srv of coreServers) {
-                        try {
-                            const pUrl = `${baseUrl}/player-v1/?id=${encodedId}&server=${srv}`;
-                            const pRes = await http_get(pUrl, { ...headers, "Referer": media.url });
-                            if (pRes.body && !pRes.body.includes("Page Not Found")) {
-                                const pDoc = await parseHtml(pRes.body);
-                                const iframe = pDoc.querySelector('iframe');
-                                if (iframe && iframe.getAttribute('src')) {
-                                    await loadExtractor(iframe.getAttribute('src'), streams);
+            const toronitesTask = (async () => {
+                try {
+                    const res = await http_get(media.url, { "Cookie": "toronites_server=vidstream", ...headers });
+                    const torDoc = await parseHtml(res.body);
+                    const iframes = Array.from(torDoc.querySelectorAll('iframe.serversel[src]'));
+                    await Promise.all(iframes.map(async (iframe) => {
+                        const serverUrl = iframe.getAttribute('src');
+                        if (serverUrl) {
+                            try {
+                                const innerRes = await http_get(serverUrl, headers);
+                                const innerDoc = await parseHtml(innerRes.body);
+                                const finalIframe = innerDoc.querySelector('iframe[src]');
+                                if (finalIframe) {
+                                    await loadExtractor(finalIframe.getAttribute('src'), streams);
                                 }
-                            }
-                        } catch (e) {}
-                    }
-                    
-                    // Legacy trid/trdekho discovery
-                    for (let i = 0; i <= 10; i++) {
-                        const trUrl = `${baseUrl}/?trdekho=${i}&trid=${postId}&trtype=${media.mediaType || 0}`;
-                        const trRes = await http_get(trUrl, { ...headers, "Referer": media.url });
-                        if (trRes.body) {
-                            const trDoc = await parseHtml(trRes.body);
-                            const iframe = trDoc.querySelector('iframe');
-                            if (iframe && iframe.getAttribute('src')) {
-                                await loadExtractor(iframe.getAttribute('src'), streams);
-                            }
+                            } catch (e) {}
                         }
-                    }
-                }
-            } catch (e) {
-                console.error("ID-based Discovery Error:", e);
-            }
+                    }));
+                } catch (e) {}
+            })();
 
-            // 3. YouTube / Vimeo / Direct Scrape (Alternative Sources)
-            try {
-                // Broad regex for any embeddable video links in scripts or body
-                const videoRegex = /https?:\/\/(?:www\.)?(?:youtube\.com\/embed\/|player\.vimeo\.com\/video\/|doodstream\.com\/e\/|filemoon\.sx\/e\/|vidmoly\.net\/embed-|emturbovid\.com\/t\/|short\.icu\/)[a-zA-Z0-9_-]+/g;
-                const vMatches = mainHtml.match(videoRegex);
-                if (vMatches) {
-                    for (const vUrl of vMatches) {
-                        await loadExtractor(vUrl, streams);
+            // 2. ID-based Discovery
+            const idDiscoveryTask = (async () => {
+                try {
+                    const bodyClass = doc.body.className;
+                    let postId = bodyClass.match(/(?:term|postid)-(\d+)/)?.[1];
+                    if (!postId) postId = mainHtml.match(/postid-(\d+)/)?.[1];
+
+                    if (postId) {
+                        const encodedId = btoa(postId);
+                        const coreServers = ['vidstream', 'gdm', 'stream-v2', 'stream-v3', 'dood', 'file'];
+                        const baseUrl = getBaseUrl();
+                        
+                        const serverTasks = coreServers.map(async (srv) => {
+                            try {
+                                const pUrl = `${baseUrl}/player-v1/?id=${encodedId}&server=${srv}`;
+                                const pRes = await http_get(pUrl, { ...headers, "Referer": media.url });
+                                if (pRes.body && !pRes.body.includes("Page Not Found")) {
+                                    const pDoc = await parseHtml(pRes.body);
+                                    const iframe = pDoc.querySelector('iframe');
+                                    if (iframe && iframe.getAttribute('src')) {
+                                        await loadExtractor(iframe.getAttribute('src'), streams);
+                                    }
+                                }
+                            } catch (e) {}
+                        });
+
+                        // Legacy trid/trdekho discovery
+                        const legacyTasks = Array.from({ length: 11 }, async (_, i) => {
+                            try {
+                                const trUrl = `${baseUrl}/?trdekho=${i}&trid=${postId}&trtype=${media.mediaType || 0}`;
+                                const trRes = await http_get(trUrl, { ...headers, "Referer": media.url });
+                                if (trRes.body) {
+                                    const trDoc = await parseHtml(trRes.body);
+                                    const iframe = trDoc.querySelector('iframe');
+                                    if (iframe && iframe.getAttribute('src')) {
+                                        await loadExtractor(iframe.getAttribute('src'), streams);
+                                    }
+                                }
+                            } catch (e) {}
+                        });
+
+                        await Promise.all([...serverTasks, ...legacyTasks]);
                     }
-                }
-                
-                // Generic Iframe Scrape
-                const bodyIframes = Array.from(doc.querySelectorAll('iframe[src]'));
-                for (const ifr of bodyIframes) {
-                    await loadExtractor(ifr.getAttribute('src'), streams);
-                }
-            } catch (e) {}
+                } catch (e) {}
+            })();
+
+            // 3. YouTube / Vimeo / Generic Scrape
+            const scrapeTask = (async () => {
+                try {
+                    const videoRegex = /https?:\/\/(?:www\.)?(?:youtube\.com\/embed\/|player\.vimeo\.com\/video\/|doodstream\.com\/e\/|filemoon\.sx\/e\/|vidmoly\.net\/embed-|emturbovid\.com\/t\/|short\.icu\/)[a-zA-Z0-9_-]+/g;
+                    const vMatches = mainHtml.match(videoRegex) || [];
+                    const bodyIframes = Array.from(doc.querySelectorAll('iframe[src]'));
+
+                    await Promise.all([
+                        ...vMatches.map(vUrl => loadExtractor(vUrl, streams)),
+                        ...bodyIframes.map(ifr => loadExtractor(ifr.getAttribute('src'), streams))
+                    ]);
+                } catch (e) {}
+            })();
+
+            await Promise.all([toronitesTask, idDiscoveryTask, scrapeTask]);
 
             // Deduplicate by URL
             const seen = new Set();
