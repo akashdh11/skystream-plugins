@@ -1,7 +1,7 @@
 (function() {
     const TMDB_API_KEY = "439c478a771f35c05022f9feabcca01c";
     const TMDB_BASE_URL = "https://api.themoviedb.org/3";
-    const MAIN_URL = "https://new3.hdhub4u.fo";
+    const MAIN_URL = "https://new4.hdhub4u.fo";
     
     const HEADERS = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
@@ -37,22 +37,26 @@
         try {
             const today = (new Date()).toISOString().split("T")[0];
             const searchUrl = `https://search.pingora.fyi/collections/post/documents/search?q=${encodeURIComponent(query)}&query_by=post_title,category&query_by_weights=4,2&sort_by=sort_by_date:desc&limit=15&highlight_fields=none&use_cache=true&page=1&analytics_tag=${today}`;
+
+            const response = await http_get(searchUrl, HEADERS);
             
-            const response = await http_get(searchUrl, { headers: HEADERS });
             const data = JSON.parse(response.body);
-            
+
             if (!data || !data.hits) {
                 return cb({ success: true, data: [] });
             }
 
             const results = data.hits.map((hit) => {
                 const doc = hit.document;
-                const title = doc.post_title;
+                if (!doc) return null;
+                const title = doc.post_title || "Unknown";
                 const yearMatch = title.match(/\((\d{4})\)|\b(\d{4})\b/);
                 const year = yearMatch ? parseInt(yearMatch[1] || yearMatch[2]) : null;
                 let url = doc.permalink;
                 if (url && url.startsWith("/")) {
                     url = `${MAIN_URL}${url}`;
+                } else if (url && !url.startsWith("http")) {
+                    url = `${MAIN_URL}/${url}`;
                 }
                 
                 const categories = Array.isArray(doc.category) ? doc.category.join(" ") : (doc.category || "");
@@ -66,7 +70,7 @@
                     type: isMovie ? "movie" : "series",
                     contentType: isMovie ? "movie" : "series"
                 });
-            });
+            }).filter(Boolean);
 
             cb({ success: true, data: results });
         } catch (e) {
@@ -97,7 +101,8 @@
                         const a = el.querySelector('figcaption a');
                         if (!a) return null;
                         const titleText = a.textContent.trim();
-                        const href = el.querySelector('figure a')?.getAttribute('href');
+                        let href = el.querySelector('figure a')?.getAttribute('href');
+                        if (href && href.startsWith("/")) href = `${MAIN_URL}${href}`;
                         const poster = el.querySelector('figure img')?.getAttribute('src');
                         
                         const isSeries = href?.includes("/series/") || titleText.toLowerCase().includes("season") || titleText.toLowerCase().includes("web series");
@@ -618,4 +623,7 @@
     globalThis.getHome = getHome;
     globalThis.load = load;
     globalThis.loadStreams = loadStreams;
+
+    // Export with namespace for the app
+    globalThis.dev_akash_stars_hdhub4u = plugin;
 })();
