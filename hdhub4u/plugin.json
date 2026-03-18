@@ -1,0 +1,16 @@
+{
+  "packageName": "dev.akash.stars.hdhub4u",
+  "name": "HDHub4U",
+  "version": 1,
+  "baseUrl": "https://new3.hdhub4u.fo",
+  "description": "Bollywood, Hollywood and Hindi Dubbed Movies & Web Series",
+  "authors": [
+    "Akash"
+  ],
+  "languages": [
+    "hi"
+  ],
+  "categories": [
+    "Movie",  "TvSeries"
+  ]
+}
