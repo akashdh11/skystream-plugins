@@ -354,48 +354,112 @@
     }
 
     async function getRedirectLinks(url) {
+        console.log("HDHub4U: getRedirectLinks for: " + url);
         try {
             const response = await http_get(url, { headers: HEADERS });
-            if (response.status !== 200) return null;
-            const doc = response.body;
-
-            const regex = /s\s*\(\s*['"]o['"]\s*,\s*['"]([A-Za-z0-9+/=]+)['"]|ck\s*\(\s*['"]_wp_http_\d+['"]\s*,\s*['"]([^'"]+)['"]/g;
-            let combinedString = "";
-            let match;
-            while ((match = regex.exec(doc)) !== null) {
-                const extractedValue = match[1] || match[2];
-                if (extractedValue) combinedString += extractedValue;
-            }
-
-            if (!combinedString) {
-                const redirectMatch = doc.match(/window\.location\.href\s*=\s*['"]([^'"]+)['"]/);
-                if (redirectMatch && redirectMatch[1]) {
-                    const newUrl = redirectMatch[1];
-                    if (newUrl !== url && !newUrl.includes(url)) {
-                        return await getRedirectLinks(newUrl);
-                    }
-                }
+            if (response.status !== 200) {
+                console.log("HDHub4U: getRedirectLinks HTTP " + response.status + " for " + url);
                 return null;
             }
+            const doc = response.body;
+            console.log("HDHub4U: getRedirectLinks body len: " + doc.length);
+            console.log("HDHub4U: getRedirectLinks body end sample: " + doc.substring(doc.length - 1000).replace(/\n/g, " "));
 
-            const decodedString = atob(rot13(atob(atob(combinedString))));
-            const jsonObject = JSON.parse(decodedString);
-            const encodedUrl = atob(jsonObject.o || "").trim();
-            if (encodedUrl) return encodedUrl;
+            // Search for all potential tokens in the entire body
+            const allBase64 = doc.match(/[A-Za-z0-9+/=]{50,}/g) || [];
+            console.log("HDHub4U: getRedirectLinks found " + allBase64.length + " potential tokens (>50 chars)");
+            
+            for (const token of allBase64) {
+                try {
+                    const s1 = atob(token);
+                    const s2 = rot13(s1);
+                    const s3 = atob(s2);
+                    const decoded = atob(s3);
+                    if (decoded && decoded.includes("{")) {
+                        console.log("HDHub4U: getRedirectLinks found VALID JSON in token len " + token.length);
+                        const json = JSON.parse(decoded);
+                        const encodedUrl = atob(json.o || "").trim();
+                        if (encodedUrl) return encodedUrl;
 
-            const data = atob(jsonObject.data || "").trim();
-            const wpHttp = (jsonObject.blog_url || "").trim();
-            if (wpHttp && data) {
-                const directLinkResponse = await http_get(`${wpHttp}?re=${data}`, { headers: HEADERS });
-                return directLinkResponse.body.trim();
+                        const data = atob(json.data || "").trim();
+                        const wpHttp = (json.blog_url || "").trim();
+                        if (wpHttp && data) {
+                            const drRes = await http_get(`${wpHttp}?re=${data}`, { headers: HEADERS });
+                            const b = drRes.body.trim();
+                            if (b.startsWith("http")) return b;
+                            const bDoc = await parseHtml(b);
+                            return bDoc.querySelector("body")?.textContent?.trim() || b;
+                        }
+                    }
+                } catch (e) {}
             }
+
+            // Fallback for anchors that might be the next step
+            const doc2 = await parseHtml(doc);
+            const anchors = doc2.querySelectorAll("a");
+            console.log("HDHub4u: getRedirectLinks found " + anchors.length + " total anchors");
+            for (const a of anchors) {
+                const href = a.getAttribute("href") || "";
+                if (href.includes("techyboy") || href.includes("gadgetsweb") || href.includes("cryptoinsights")) {
+                    console.log("HDHub4u: getRedirectLinks found relevant anchor: " + href);
+                    if (href !== url && !href.includes(url)) return await getRedirectLinks(href);
+                }
+            }
+
+            // Final fallback: standard regex or meta redirects
+            console.log("HDHub4U: getRedirectLinks falling back to standard redirects");
+            const nextMatch = doc.match(/window\.location\.href\s*=\s*['"]([^'"]+)['"]|URL\s*=\s*['"]([^'"]+)['"]|\?next=([^'"]+)|\?id=([^'"]+)/i);
+            if (nextMatch) {
+                const nextUrl = nextMatch[1] || nextMatch[2] || nextMatch[3] || nextMatch[4];
+                if (nextUrl && nextUrl !== url && !nextUrl.includes(url)) {
+                    // If it's a relative URL or just a query string
+                    let finalNext = nextUrl;
+                    if (nextUrl.startsWith("?")) {
+                        const baseUrl = new URL(url);
+                        finalNext = `${baseUrl.origin}${baseUrl.pathname}${nextUrl}`;
+                    } else if (!nextUrl.startsWith("http")) {
+                        const baseUrl = new URL(url);
+                        if (baseUrl.hostname.includes("cryptoinsights.site")) {
+                             // Hard fix: these links are ALWAYS under /homelander/
+                             finalNext = `${baseUrl.origin}/homelander/${nextUrl.replace(/^\//, "")}`;
+                        } else {
+                            const pathParts = baseUrl.pathname.split("/");
+                            pathParts.pop();
+                            const basePath = pathParts.join("/");
+                            finalNext = `${baseUrl.origin}${basePath}/${nextUrl.replace(/^\//, "")}`;
+                        }
+                    }
+                    console.log("HDHub4U: getRedirectLinks recursing to: " + finalNext);
+                    return await getRedirectLinks(finalNext);
+                }
+            }
+
+            // Fallback for script-based redirects inside the body
+            const scriptMatch = doc.match(/window\.location\.href\s*=\s*['"]([^'"]+)['"]|location\.replace\(['"]([^'"]+)['"]\)/i);
+            if (scriptMatch) {
+                const sUrl = scriptMatch[1] || scriptMatch[2];
+                if (sUrl && sUrl !== url && !sUrl.includes(url)) {
+                    let fUrl = sUrl;
+                    if (!sUrl.startsWith("http")) {
+                        const bu = new URL(url);
+                        fUrl = `${bu.origin}/${sUrl.replace(/^\//, "")}`;
+                    }
+                    console.log("HDHub4U: getRedirectLinks script recurse: " + fUrl);
+                    return await getRedirectLinks(fUrl);
+                }
+            }
+            const metaMatch = doc.match(/meta http-equiv="refresh" content=".*url=(.*?)"/i);
+            if (metaMatch && metaMatch[1]) return metaMatch[1];
+
             return null;
         } catch (e) {
+            console.error("HDHub4U: getRedirectLinks Error: " + e.message);
             return null;
         }
     }
 
     async function hubCloudExtractor(url, referer) {
+        console.log("HDHub4U: hubCloudExtractor for: " + url);
         try {
             let currentUrl = url.replace("hubcloud.ink", "hubcloud.dad");
             const res = await http_get(currentUrl, { headers: { ...HEADERS, "Referer": referer } });
@@ -418,6 +482,7 @@
                         const urlObj = new URL(currentUrl);
                         nextHref = `${urlObj.protocol}//${urlObj.hostname}/${nextHref.replace(/^\//, "")}`;
                     }
+                    console.log("HDHub4U: HubCloud next step: " + nextHref);
                     finalUrl = nextHref;
                     const res2 = await http_get(finalUrl, { headers: { ...HEADERS, "Referer": currentUrl } });
                     pageData = res2.body;
@@ -429,18 +494,61 @@
             const header = $.querySelector("div.card-header")?.textContent?.trim() || "";
             const qualityStr = header.match(/(\d{3,4})[pP]/)?.[1];
             const quality = qualityStr ? parseInt(qualityStr) : 1080;
+            const headerDetails = cleanTitle(header);
+            const labelExtras = (headerDetails ? `[${headerDetails}]` : "") + (size ? `[${size}]` : "");
 
             const links = [];
-            $.querySelectorAll("a.btn").forEach(element => {
+            const elements = $.querySelectorAll("a.btn");
+            console.log("HDHub4U: HubCloud found " + elements.length + " buttons");
+            for (const element of elements) {
                 const link = element.getAttribute("href");
                 const text = element.textContent.toLowerCase();
+                
                 if (text.includes("download file") || text.includes("fsl server") || text.includes("s3 server") || text.includes("fslv2") || text.includes("mega server")) {
+                    let label = "HubCloud";
+                    if (text.includes("fsl server")) label = "HubCloud [FSL]";
+                    else if (text.includes("s3 server")) label = "HubCloud [S3]";
+                    else if (text.includes("fslv2")) label = "HubCloud [FSLv2]";
+                    else if (text.includes("mega server")) label = "HubCloud [Mega]";
+                    
                     links.push(new StreamResult({
-                        name: `HubCloud [${text.includes('fsl') ? 'FSL' : 'Direct'}]`,
+                        source: label,
+                        name: `${label} ${labelExtras}`,
                         url: link,
                         quality: qualityStr || "1080p",
                         size: size
                     }));
+                } else if (text.includes("buzzserver")) {
+                    try {
+                        console.log("HDHub4U: HubCloud BuzzServer: " + link);
+                        const buzzResp = await http_get(`${link}/download`, { headers: { ...HEADERS, "Referer": link } });
+                        let dlink = buzzResp.headers["hx-redirect"] || buzzResp.headers["HX-Redirect"];
+                        if (dlink) {
+                            links.push(new StreamResult({
+                                source: "BuzzServer",
+                                name: `BuzzServer ${labelExtras}`,
+                                url: dlink,
+                                quality: qualityStr || "1080p",
+                                size: size
+                            }));
+                        }
+                    } catch (e) {}
+                } else if (text.includes("10gbps")) {
+                    try {
+                        console.log("HDHub4U: HubCloud 10Gbps: " + link);
+                        const resp = await http_get(link, { headers: HEADERS });
+                        const loc = resp.headers["location"];
+                        if (loc && loc.includes("link=")) {
+                            const dlink = loc.substring(loc.indexOf("link=") + 5);
+                            links.push(new StreamResult({
+                                source: "10Gbps",
+                                name: `10Gbps ${labelExtras}`,
+                                url: dlink,
+                                quality: qualityStr || "1080p",
+                                size: size
+                            }));
+                        }
+                    } catch (e) {}
                 } else if (link && link.includes("pixeldra")) {
                     links.push(new StreamResult({
                         name: "PixelDrain",
@@ -448,10 +556,19 @@
                         quality: qualityStr || "1080p",
                         size: size
                     }));
+                } else if (link && link.startsWith("http") && !link.includes("facebook.com") && !link.includes("twitter.com")) {
+                    console.log("HDHub4U: HubCloud nested check: " + link);
+                    const extracted = await internalLoadExtractor(link, finalUrl);
+                    links.push(...extracted.map(l => {
+                        l.quality = l.quality || qualityStr || "1080p";
+                        l.size = l.size || size;
+                        return l;
+                    }));
                 }
-            });
+            }
             return links;
         } catch (e) {
+            console.error("HDHub4U: hubCloudExtractor Error: " + e.message);
             return [];
         }
     }
@@ -521,9 +638,12 @@
             const key = btoa("kiemtienmua911ca"); // Convert to base64 for the bridge
             const ivs = [btoa("1234567890oiuytr"), btoa("0123456789abcdef")];
             
+            // Convert hex to base64 for the Dart bridge which expects base64
+            const encodedB64 = btoa(encoded.match(/\w{2}/g).map(a => String.fromCharCode(parseInt(a, 16))).join(""));
+
             for (const ivB64 of ivs) {
                 try {
-                    const decryptedText = await globalThis.crypto.decryptAES(encoded, key, ivB64);
+                    const decryptedText = await globalThis.crypto.decryptAES(encodedB64, key, ivB64);
                     if (decryptedText && decryptedText.includes("source")) {
                         const m3u8Match = decryptedText.match(/"source":"(.*?)"/);
                         const m3u8 = m3u8Match ? m3u8Match[1].replace(/\\/g, "") : null;
@@ -547,14 +667,46 @@
         }
     }
 
+    async function streamTapeExtractor(url) {
+        try {
+            const res = await http_get(url, { headers: HEADERS });
+            const data = res.body;
+            let videoSrc = data.match(/document\.getElementById\('videolink'\)\.innerHTML = (.*?);/)?.[1];
+            if (videoSrc) {
+                const parts = videoSrc.match(/'([^']+)'/g).map(p => p.slice(1, -1));
+                const finalUrl = "https:" + parts.join("");
+                return [new StreamResult({ source: "StreamTape", url: finalUrl, quality: "720p" })];
+            }
+            return [];
+        } catch (e) {
+            return [];
+        }
+    }
+
     async function internalLoadExtractor(url, referer = MAIN_URL) {
         try {
             const hostname = new URL(url).hostname;
             const isRedirect = url.includes("?id=") || ["techyboy4u", "gadgetsweb.xyz", "cryptoinsights.site", "bloggingvector", "ampproject.org"].some(h => hostname.includes(h));
             
             if (isRedirect) {
-                const finalLink = await getRedirectLinks(url);
-                if (finalLink && finalLink !== url) return await internalLoadExtractor(finalLink, url);
+                const res = await getRedirectLinks(url);
+                if (res) {
+                    // Strip leading ? or & if present (sometimes atob returns it)
+                    let cleanRes = res.trim();
+                    if (cleanRes.startsWith("?") || cleanRes.startsWith("&")) {
+                        cleanRes = cleanRes.substring(1);
+                    }
+                    
+                    if (cleanRes.startsWith("http")) {
+                        console.log("HDHub4U: internalLoadExtractor redirected to: " + cleanRes);
+                        return await internalLoadExtractor(cleanRes, url);
+                    } else if (cleanRes.includes("hubcloud") || cleanRes.includes("hubcdn") || cleanRes.includes("hubdrive")) {
+                        // Likely a path or partial URL
+                        const baseUrl = new URL(url);
+                        const fullUrl = cleanRes.startsWith("/") ? `${baseUrl.origin}${cleanRes}` : `${baseUrl.origin}/${cleanRes}`;
+                        return await internalLoadExtractor(fullUrl, url);
+                    }
+                }
                 return [];
             }
             
@@ -563,6 +715,7 @@
             if (hostname.includes("hubdrive")) return await hubDriveExtractor(url, referer);
             if (hostname.includes("hblinks") || hostname.includes("hubstream.dad")) return await hbLinksExtractor(url);
             if (hostname.includes("hubstream") || hostname.includes("vidstack")) return await vidStackExtractor(url);
+            if (hostname.includes("streamtape")) return await streamTapeExtractor(url);
             if (hostname.includes("pixeldrain")) {
                 return [new StreamResult({
                     source: "PixelDrain",
@@ -570,43 +723,106 @@
                 })];
             }
             if (hostname.includes("hdstream4u")) {
+                const results = await internalLoadExtractor(url); // Recursive load might be needed for VidHidePro
+                if (results.length > 0) return results;
                 return [new StreamResult({ source: "HdStream4u", url: url })];
             }
             return [];
         } catch (e) {
+            console.error(`HDHub4U: internalLoadExtractor error for ${url}: ${e.message}`);
             return [];
         }
     }
 
     async function loadStreams(data, cb) {
+        console.log("HDHub4U: Starting loadStreams for data: " + (typeof data === 'string' ? data.substring(0, 100) : "object"));
         try {
-            // Data can be a URL string or an object with url property
-            let url = data;
+            let links = [];
             if (typeof data === 'string' && data.startsWith('[')) {
-                const parsed = JSON.parse(data);
-                url = parsed[0]?.url || parsed[0];
-            } else if (typeof data === 'object') {
-                url = data.url || data[0]?.url;
-            }
-
-            if (!url) return cb({ success: true, data: [] });
-
-            if (typeof url === 'string' && url.startsWith('[')) {
-                const links = JSON.parse(url);
-                const allResults = [];
-                for (const l of links) {
-                    const lUrl = typeof l === 'string' ? l : l.url;
-                    if (lUrl) {
-                        const res = await internalLoadExtractor(lUrl);
-                        allResults.push(...res);
-                    }
+                links = JSON.parse(data);
+            } else if (Array.isArray(data)) {
+                links = data;
+            } else if (typeof data === 'object' && data.url) {
+                if (data.url.startsWith('[')) {
+                    links = JSON.parse(data.url);
+                } else {
+                    links = [{ url: data.url }];
                 }
-                return cb({ success: true, data: allResults });
+            } else if (typeof data === 'string') {
+                links = [{ url: data }];
             }
 
-            const results = await internalLoadExtractor(url);
-            cb({ success: true, data: results });
+            if (!links || links.length === 0) {
+                console.log("HDHub4U: No links provided in data");
+                return cb({ success: true, data: [] });
+            }
+
+            console.log("HDHub4U: Processing " + links.length + " initial links");
+            const allResults = [];
+            
+            // Deduplicate initial links by URL
+            const uniqueLinks = [];
+            const seenInitialUrls = new Set();
+            for (const l of links) {
+                const u = typeof l === 'string' ? l : l.url;
+                if (u && !seenInitialUrls.has(u)) {
+                    seenInitialUrls.add(u);
+                    uniqueLinks.push(typeof l === 'string' ? { url: u, name: "" } : l);
+                }
+            }
+            
+            const results = await Promise.all(uniqueLinks.map(async (lObj) => {
+                try {
+                    const lUrl = lObj.url;
+                    const lName = lObj.name || "";
+                    console.log("HDHub4U: Extracting from: " + lUrl + " (name: " + lName + ")");
+                    const streams = await internalLoadExtractor(lUrl);
+                    
+                    // Apply quality formatting based on original link name
+                    return streams.map(s => {
+                        let finalQuality = s.quality && s.quality !== "Unknown" ? s.quality : "";
+                        
+                        // Extract resolution from the initial name if not set
+                        const resMatch = lName.match(/(2160p|1080p|720p|480p|360p|4K|8K)/i);
+                        if (resMatch && !finalQuality) {
+                            finalQuality = resMatch[1];
+                        }
+                        
+                        // Extract extra info brackets [size]
+                        const extMatch = lName.match(/\[(.*?)\]/);
+                        let extInfo = extMatch ? ` ${extMatch[0]}` : "";
+
+                        let sourceLabel = s.source;
+                        if (finalQuality && !sourceLabel.includes(finalQuality)) {
+                            sourceLabel = `${sourceLabel} - ${finalQuality}`;
+                        }
+                        if (extInfo && !sourceLabel.includes(extInfo.trim())) {
+                            sourceLabel = `${sourceLabel}${extInfo}`;
+                        }
+
+                        s.source = sourceLabel;
+                        return s;
+                    });
+                } catch (e) {
+                    console.error("HDHub4U: Extraction error for " + lObj.url + ": " + e.message);
+                    return [];
+                }
+            }));
+
+            results.forEach(res => allResults.push(...res));
+
+            // Deduplicate final results by URL
+            const seen = new Set();
+            const finalResults = allResults.filter(item => {
+                if (seen.has(item.url)) return false;
+                seen.add(item.url);
+                return true;
+            });
+
+            console.log("HDHub4U: Found " + finalResults.length + " final streams");
+            cb({ success: true, data: finalResults });
         } catch (e) {
+            console.error("HDHub4U: loadStreams Critical Error: " + e.message);
             cb({ success: false, error: e.message });
         }
     }
@@ -623,7 +839,4 @@
     globalThis.getHome = getHome;
     globalThis.load = load;
     globalThis.loadStreams = loadStreams;
-
-    // Export with namespace for the app
-    globalThis.dev_akash_stars_hdhub4u = plugin;
 })();
