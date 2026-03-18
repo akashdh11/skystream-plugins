@@ -184,6 +184,24 @@
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.freetv.sky"
   },
   {
+    "packageName": "dev.akash.stars.hdhub4u",
+    "name": "HDHub4U",
+    "version": 1,
+    "baseUrl": "https://new3.hdhub4u.fo",
+    "description": "Bollywood, Hollywood and Hindi Dubbed Movies & Web Series",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "hi"
+    ],
+    "categories": [
+      "Movie",
+      "TvSeries"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.hdhub4u.sky"
+  },
+  {
     "packageName": "dev.akash.stars.jiobd",
     "name": "Jio BD",
     "version": 2,
