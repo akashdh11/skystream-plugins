@@ -47,7 +47,7 @@
     function qualityFromString(str) {
         if (!str) return 0;
         const s = str.toUpperCase();
-        if (s.includes("4K") || s.includes("2160P")) return 2160;
+        if (s.includes("4K") || s.includes("2160")) return 2160;
         if (s.includes("1080")) return 1080;
         if (s.includes("720")) return 720;
         if (s.includes("480")) return 480;
