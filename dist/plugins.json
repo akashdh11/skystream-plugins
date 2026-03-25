@@ -204,7 +204,7 @@
   {
     "packageName": "dev.akash.stars.hindmovie",
     "name": "HindMovie",
-    "version": 2,
+    "version": 3,
     "baseUrl": "https://hindmoviez.cafe",
     "description": "Enjoy movies in 4k",
     "authors": [
