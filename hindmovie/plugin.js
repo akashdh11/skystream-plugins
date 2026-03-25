@@ -219,7 +219,6 @@
                 url: href,
                 posterUrl,
                 type,
-                quality: qualityFromString(rawTitle)
             }));
         }
         return items;
@@ -577,7 +576,7 @@ async function loadStreams(url, cb) {
 
                         results.push(new StreamResult({
                             url: finalUrl,
-                            quality,
+                            source: quality,
                             headers: { Referer: btnUrl }
                         }));
                     }
