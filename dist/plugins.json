@@ -155,7 +155,7 @@
     "baseUrl": "https://4khdhub.dad",
     "description": "4K Movies and TV Shows (VOD)",
     "authors": [
-      "Akash"
+      "phisher"
     ],
     "languages": [
       "en"
@@ -200,6 +200,26 @@
       "TvSeries"
     ],
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.hdhub4u.sky"
+  },
+  {
+    "packageName": "dev.akash.stars.hindmovie",
+    "name": "HindMovie",
+    "version": 1,
+    "baseUrl": "https://hindmoviez.cafe",
+    "description": "Enjoy movies in 4k",
+    "authors": [
+      "igris"
+    ],
+    "languages": [
+      "en",
+      "hi"
+    ],
+    "categories": [
+      "Movie",
+      "TvSeries",
+      "Anime"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.hindmovie.sky"
   },
   {
     "packageName": "dev.akash.stars.jiobd",
@@ -497,7 +517,7 @@
     "baseUrl": "https://yflix.to",
     "description": "Yflix Movie Provider",
     "authors": [
-      "Akash"
+      "phisher"
     ],
     "languages": [
       "en"
