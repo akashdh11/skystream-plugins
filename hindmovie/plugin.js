@@ -47,11 +47,11 @@
     function qualityFromString(str) {
         if (!str) return 0;
         const s = str.toUpperCase();
-        if (s.includes("4K") || s.includes("2160")) return 2160p;
-        if (s.includes("1080")) return 1080p;
-        if (s.includes("720")) return 720p;
-        if (s.includes("480")) return 480p;
-        if (s.includes("360")) return 360p;
+        if (s.includes("4K") || s.includes("2160P")) return 2160;
+        if (s.includes("1080")) return 1080;
+        if (s.includes("720")) return 720;
+        if (s.includes("480")) return 480;
+        if (s.includes("360")) return 360;
         return 0;
     }
 
@@ -576,7 +576,7 @@ async function loadStreams(url, cb) {
 
                         results.push(new StreamResult({
                             url: finalUrl,
-                            source: quality.,
+                            source: quality.toString(),
                             headers: { Referer: btnUrl }
                         }));
                     }
