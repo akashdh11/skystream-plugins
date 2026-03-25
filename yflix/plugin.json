@@ -4,7 +4,7 @@
   "version": 3,
   "baseUrl": "https://yflix.to",
   "description": "Yflix Movie Provider",
-  "authors": ["Akash"],
+  "authors": ["phisher"],
   "languages": ["en"],
   "categories": ["Movie", "TvSeries"]
 }
