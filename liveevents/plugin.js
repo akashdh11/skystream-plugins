@@ -180,8 +180,8 @@
                     
                     if (s.type === "7" && s.api && s.api.includes(":")) {
                         const [kid, key] = s.api.split(":");
-                        res.drmKid = hexToB64(kid).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-                        res.drmKey = hexToB64(key).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+                        res.drmKid = kid.replace(/-/g, "");
+                        res.drmKey = key.replace(/-/g, "");
                         res.drmType = "clearkey";
                     }
                     results.push(res);
