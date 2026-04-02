@@ -2,7 +2,7 @@
   "packageName": "dev.akash.stars.xdmovies",
   "name": "XD Movies",
   "version": 1,
-  "baseUrl": "https://xdmovies.site/",
+  "baseUrl": "https://top.xdmovies.wtf/",
   "description": "Multi-source scraper for XD Movies",
   "authors": ["Akash"],
   "languages": ["en"],
