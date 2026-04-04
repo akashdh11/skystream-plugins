@@ -1,0 +1,10 @@
+{
+  "packageName": "dev.akash.stars.cinevood",
+  "name": "Cinevood",
+  "version": 1,
+  "baseUrl": "https://one.1cinevood.watch/",
+  "description": "Multi-source scraper for Cinevood (Includes Cinemeta Metadata)",
+  "authors": ["Akash"],
+  "languages": ["hi", "en"],
+  "categories": ["Movie", "TvSeries", "AsianDrama", "Anime"]
+}
