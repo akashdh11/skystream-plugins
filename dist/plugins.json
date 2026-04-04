@@ -113,6 +113,27 @@
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.bollyflix.sky"
   },
   {
+    "packageName": "dev.akash.stars.cinevood",
+    "name": "Cinevood",
+    "version": 1,
+    "baseUrl": "https://one.1cinevood.watch/",
+    "description": "Multi-source scraper for Cinevood (Includes Cinemeta Metadata)",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "hi",
+      "en"
+    ],
+    "categories": [
+      "Movie",
+      "TvSeries",
+      "AsianDrama",
+      "Anime"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.cinevood.sky"
+  },
+  {
     "packageName": "dev.akash.stars.darktv",
     "name": "DARK TV",
     "version": 1,
