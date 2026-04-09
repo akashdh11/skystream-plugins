@@ -324,8 +324,6 @@
                     try {
                         const m = JSON.parse(metaRes.body).meta;
                         desc = m.description || "";
-                        poster = m.poster || poster;
-                        title = m.name || title;
                     } catch {}
                 }
             }
