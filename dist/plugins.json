@@ -262,6 +262,28 @@
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.hindmovie.sky"
   },
   {
+    "packageName": "dev.akash.stars.istreamflare",
+    "name": "IStreamFlare (Beta)",
+    "version": 1,
+    "baseUrl": "https://stream.hippitunes.pro",
+    "description": "IStreamFlare Movies & TV Series",
+    "authors": [
+      "Phisher98",
+      "Akash"
+    ],
+    "languages": [
+      "hi",
+      "en"
+    ],
+    "categories": [
+      "Movies",
+      "TV Series",
+      "Anime"
+    ],
+    "iconUrl": "https://raw.githubusercontent.com/phisher98/TVVVV/refs/heads/main/Icons/streamflare.png",
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.istreamflare.sky"
+  },
+  {
     "packageName": "dev.akash.stars.jiobd",
     "name": "Jio BD",
     "version": 2,
