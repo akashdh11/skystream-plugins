@@ -58,61 +58,6 @@
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.animesalt.sky"
   },
   {
-    "packageName": "dev.akash.skystream.ayna",
-    "name": "AYNA",
-    "version": 2,
-    "baseUrl": "https://playlist-cricfy.noobon.top",
-    "description": "AYNA OTT Live TV Provider",
-    "authors": [
-      "Akash"
-    ],
-    "languages": [
-      "en",
-      "bn"
-    ],
-    "categories": [
-      "LiveTv",
-      "Others"
-    ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.skystream.ayna.sky"
-  },
-  {
-    "packageName": "dev.akash.stars.ayna2",
-    "name": "AYNA 2",
-    "version": 1,
-    "baseUrl": "https://bdix.spidy.online",
-    "description": "AYNA 2 Live Channels",
-    "authors": [
-      "Akash"
-    ],
-    "languages": [
-      "en"
-    ],
-    "categories": [
-      "LiveTv",
-      "Others"
-    ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.ayna2.sky"
-  },
-  {
-    "packageName": "dev.akash.stars.bdixtv",
-    "name": "BDIX TV",
-    "version": 1,
-    "baseUrl": "https://tv.noobon.top",
-    "description": "BDIX TV Live Channels",
-    "authors": [
-      "Akash"
-    ],
-    "languages": [
-      "en"
-    ],
-    "categories": [
-      "LiveTv",
-      "Others"
-    ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.bdixtv.sky"
-  },
-  {
     "packageName": "dev.akash.stars.bollyflix",
     "name": "BollyFlix",
     "version": 1,
@@ -153,42 +98,6 @@
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.cinevood.sky"
   },
   {
-    "packageName": "dev.akash.stars.darktv",
-    "name": "DARK TV",
-    "version": 1,
-    "baseUrl": "https://ranapk.online",
-    "description": "DARK TV Live Channels (v2 Standard)",
-    "authors": [
-      "Akash"
-    ],
-    "languages": [
-      "en"
-    ],
-    "categories": [
-      "LiveTv",
-      "Others"
-    ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.darktv.sky"
-  },
-  {
-    "packageName": "dev.akash.stars.dishtv",
-    "name": "Dish TV",
-    "version": 1,
-    "baseUrl": "https://dishtv.in",
-    "description": "Dish TV Live Channels (Real-world IPTV)",
-    "authors": [
-      "Akash"
-    ],
-    "languages": [
-      "en",
-      "hi"
-    ],
-    "categories": [
-      "LiveTv"
-    ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.dishtv.sky"
-  },
-  {
     "packageName": "dev.akash.stars.4khd",
     "name": "4K HD",
     "version": 1,
@@ -205,23 +114,6 @@
       "TvSeries"
     ],
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.4khd.sky"
-  },
-  {
-    "packageName": "dev.akash.stars.freetv",
-    "name": "Free TV",
-    "version": 1,
-    "baseUrl": "https://freetv.to",
-    "description": "Global Free Live TV with custom decryption",
-    "authors": [
-      "Akash"
-    ],
-    "languages": [
-      "en"
-    ],
-    "categories": [
-      "LiveTv"
-    ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.freetv.sky"
   },
   {
     "packageName": "dev.akash.stars.hdhub4u",
@@ -282,40 +174,6 @@
     ],
     "iconUrl": "https://raw.githubusercontent.com/phisher98/TVVVV/refs/heads/main/Icons/streamflare.png",
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.istreamflare.sky"
-  },
-  {
-    "packageName": "dev.akash.stars.jiobd",
-    "name": "Jio BD",
-    "version": 2,
-    "baseUrl": "https://ranapk.short.gy",
-    "description": "Jio BD Live TV and Sports",
-    "authors": [
-      "Akash"
-    ],
-    "languages": [
-      "en"
-    ],
-    "categories": [
-      "LiveTv"
-    ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.jiobd.sky"
-  },
-  {
-    "packageName": "dev.akash.stars.liveevents",
-    "name": "Live Events",
-    "version": 2,
-    "baseUrl": "https://cfyjgfbnjjgv103.top",
-    "description": "Live Sports Events and Highlights",
-    "authors": [
-      "Akash"
-    ],
-    "languages": [
-      "en"
-    ],
-    "categories": [
-      "LiveTv"
-    ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.liveevents.sky"
   },
   {
     "packageName": "dev.akash.stars.moviesdrive",
@@ -417,40 +275,6 @@
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.netmirror.prime.sky"
   },
   {
-    "packageName": "dev.akash.stars.piratestv",
-    "name": "PiratesTV",
-    "version": 1,
-    "baseUrl": "https://raw.githubusercontent.com/FunctionError/PiratesTv/refs/heads/main/combined_playlist.m3u",
-    "description": "Community M3U Playlist",
-    "authors": [
-      "Akash"
-    ],
-    "languages": [
-      "hi"
-    ],
-    "categories": [
-      "LiveTv"
-    ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.piratestv.sky"
-  },
-  {
-    "packageName": "dev.akash.stars.pishow",
-    "name": "PISHOW",
-    "version": 1,
-    "baseUrl": "https://playlist-storage.pages.dev/PLAYLIST/playboxtv.m3u",
-    "description": "PISHOW Live Channels",
-    "authors": [
-      "Akash"
-    ],
-    "languages": [
-      "en"
-    ],
-    "categories": [
-      "LiveTv"
-    ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.pishow.sky"
-  },
-  {
     "packageName": "dev.akash.stars.ringz",
     "name": "RingZ",
     "version": 1,
@@ -469,40 +293,6 @@
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.ringz.sky"
   },
   {
-    "packageName": "dev.akash.stars.roarzone",
-    "name": "Roar Zone",
-    "version": 3,
-    "baseUrl": "https://gist.githubusercontent.com/doctor-8trange/853accdac0fa96e8421514000fc873ee/raw/wanda.m3u",
-    "description": "Roar Zone Live Channels",
-    "authors": [
-      "Akash"
-    ],
-    "languages": [
-      "en"
-    ],
-    "categories": [
-      "LiveTv"
-    ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.roarzone.sky"
-  },
-  {
-    "packageName": "dev.akash.stars.sonyliv",
-    "name": "SonyLIV",
-    "version": 3,
-    "baseUrl": "https://raw.githubusercontent.com/doctor-8trange/zyphora/refs/heads/main/data/sony.m3u",
-    "description": "SonyLIV Live Channels",
-    "authors": [
-      "Akash"
-    ],
-    "languages": [
-      "en"
-    ],
-    "categories": [
-      "LiveTv"
-    ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.sonyliv.sky"
-  },
-  {
     "packageName": "dev.akash.stars.streamflix",
     "name": "StreamFlix 2.0",
     "version": 4,
@@ -519,40 +309,6 @@
       "TvSeries"
     ],
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.streamflix.sky"
-  },
-  {
-    "packageName": "dev.akash.stars.sunnxt",
-    "name": "SUN NXT",
-    "version": 3,
-    "baseUrl": "https://raw.githubusercontent.com/alexandermail371/cricfytv/refs/heads/main/sunxt.m3u",
-    "description": "SUN NXT Live TV",
-    "authors": [
-      "Akash"
-    ],
-    "languages": [
-      "en"
-    ],
-    "categories": [
-      "LiveTv"
-    ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.sunnxt.sky"
-  },
-  {
-    "packageName": "dev.akash.stars.wavesott",
-    "name": "WAVES OTT",
-    "version": 1,
-    "baseUrl": "https://alex4528.site/playlist/waves.m3u",
-    "description": "WAVES OTT Live Channels",
-    "authors": [
-      "Akash"
-    ],
-    "languages": [
-      "en"
-    ],
-    "categories": [
-      "LiveTv"
-    ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.wavesott.sky"
   },
   {
     "packageName": "dev.akash.stars.xdmovies",
@@ -606,39 +362,5 @@
       "Movie"
     ],
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.yts.sky"
-  },
-  {
-    "packageName": "dev.akash.stars.yupptv",
-    "name": "YUPPTV",
-    "version": 1,
-    "baseUrl": "https://tv.noobon.top/playlist/yapp.php",
-    "description": "Yupp TV Channels",
-    "authors": [
-      "Akash"
-    ],
-    "languages": [
-      "en"
-    ],
-    "categories": [
-      "LiveTv"
-    ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.yupptv.sky"
-  },
-  {
-    "packageName": "dev.akash.stars.zee5",
-    "name": "ZEE5 IN 2",
-    "version": 1,
-    "baseUrl": "https://alex4528.site/playlist/z5.m3u",
-    "description": "ZEE5 IN 2 Live Channels",
-    "authors": [
-      "Akash"
-    ],
-    "languages": [
-      "en"
-    ],
-    "categories": [
-      "LiveTv"
-    ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.zee5.sky"
   }
 ]
