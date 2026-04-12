@@ -134,26 +134,6 @@
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.hdhub4u.sky"
   },
   {
-    "packageName": "dev.akash.stars.hindmovie",
-    "name": "HindMovie",
-    "version": 7,
-    "baseUrl": "https://hindmoviez.cafe",
-    "description": "Enjoy movies in 4k",
-    "authors": [
-      "igris"
-    ],
-    "languages": [
-      "en",
-      "hi"
-    ],
-    "categories": [
-      "Movie",
-      "TvSeries",
-      "Anime"
-    ],
-    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.hindmovie.sky"
-  },
-  {
     "packageName": "dev.akash.stars.istreamflare",
     "name": "IStreamFlare (Beta)",
     "version": 1,
