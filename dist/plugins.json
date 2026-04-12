@@ -79,8 +79,8 @@
   {
     "packageName": "dev.akash.stars.cinevood",
     "name": "Cinevood",
-    "version": 1,
-    "baseUrl": "https://one.1cinevood.watch/",
+    "version": 2,
+    "baseUrl": "https://two.1cinevood.watch/",
     "description": "Multi-source scraper for Cinevood (Includes Cinemeta Metadata)",
     "authors": [
       "Akash"
