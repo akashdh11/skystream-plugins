@@ -150,6 +150,104 @@
         return url;
     }
 
+    function parsePositiveInt(value) {
+        const num = parseInt(value, 10);
+        return Number.isFinite(num) && num > 0 ? num : null;
+    }
+
+    function extractNumber(text, patterns) {
+        if (!text) return null;
+        const normalized = stripHTML(String(text)).replace(/\s+/g, " ").trim();
+        for (const pattern of patterns) {
+            const match = normalized.match(pattern);
+            if (!match) continue;
+            const value = parsePositiveInt(match[1]);
+            if (value) return value;
+        }
+        return null;
+    }
+
+    function parseSeasonNumber(...texts) {
+        for (const text of texts) {
+            const season = extractNumber(text, [
+                /(?:season|series)\s*[-:]?\s*0*([1-9]\d*)/i,
+                /\bs\s*0*([1-9]\d*)\b/i
+            ]);
+            if (season) return season;
+        }
+        return null;
+    }
+
+    function parseEpisodeNumber(...texts) {
+        for (const text of texts) {
+            const episode = extractNumber(text, [
+                /episode\s*[-:]?\s*0*([1-9]\d*)/i,
+                /episode[-_/]0*([1-9]\d*)/i,
+                /\bs0*\d+\s*e0*([1-9]\d*)\b/i,
+                /\bep\s*[-:]?\s*0*([1-9]\d*)\b/i
+            ]);
+            if (episode) return episode;
+        }
+        return null;
+    }
+
+    function isSupportedEpisodeLink(url) {
+        return !!url && (
+            url.includes("gadgetsweb.xyz") ||
+            url.includes("hubcloud") ||
+            url.includes("hubdrive") ||
+            url.includes("drive.google.com") ||
+            url.includes("drive")
+        );
+    }
+
+    function addEpisodeEntry(episodeMap, seasonNum, episodeNum, name, links) {
+        if (!episodeNum || !Array.isArray(links) || links.length === 0) return;
+
+        const season = seasonNum || 1;
+        const key = `${season}:${episodeNum}`;
+        let entry = episodeMap.get(key);
+
+        if (!entry) {
+            entry = {
+                season,
+                episode: episodeNum,
+                name: name || `Episode ${episodeNum}`,
+                links: [],
+                linkSet: new Set()
+            };
+            episodeMap.set(key, entry);
+        } else if (name && (!entry.name || /^Episode \d+$/i.test(entry.name))) {
+            entry.name = name;
+        }
+
+        links.forEach(link => {
+            const url = fixUrl(link?.url || "");
+            if (!isSupportedEpisodeLink(url) || entry.linkSet.has(url)) return;
+            entry.linkSet.add(url);
+            entry.links.push({
+                name: link?.name?.trim() || entry.name || "Source",
+                url
+            });
+        });
+    }
+
+    function buildSortedEpisodes(episodeMap, poster) {
+        return [...episodeMap.values()]
+            .sort((a, b) => {
+                if (a.season !== b.season) return a.season - b.season;
+                if (a.episode !== b.episode) return a.episode - b.episode;
+                return a.name.localeCompare(b.name);
+            })
+            .map(entry => new Episode({
+                name: entry.name || `Episode ${entry.episode}`,
+                season: entry.season,
+                episode: entry.episode,
+                url: JSON.stringify([{ name: entry.name || `Episode ${entry.episode}`, links: entry.links }]),
+                posterUrl: poster
+            }));
+    }
+
     function parseRes(html) {
         const doc = new JsoupLite(html);
         const items = [];
@@ -270,40 +368,92 @@
                     })
                 });
             } else {
-                const episodes = [];
-                // Handle new series layout with collapsible episodes
-                const epItems = doc.select(".episode-download-item");
-                if (epItems.length > 0) {
-                    epItems.forEach(item => {
-                        const epTitle = item.find(".episode-file-title")?.textContent()?.trim() || "Episode";
-                        const epNum = parseInt(item.find(".badge-psa")?.textContent()?.match(/Episode-(\d+)/i)?.[1]) || 1;
-                        const seasonNum = parseInt(item.parent?.parent?.find(".episode-number")?.textContent()?.match(/S(\d+)/i)?.[1]) || 1;
-                        const links = item.select("a.btn").map(a => ({
-                            name: a.textContent().trim(),
-                            url: fixUrl(a.attr("href"))
-                        })).filter(l => l.url && (l.url.includes("gadgetsweb.xyz") || l.url.includes("hubcloud") || l.url.includes("drive")));
+                const episodeMap = new Map();
 
-                        if (links.length > 0) {
-                            episodes.push(new Episode({
-                                name: epTitle,
-                                season: seasonNum,
-                                episode: epNum,
-                                url: JSON.stringify([{ name: epTitle, links }]),
-                                posterUrl: poster
-                            }));
-                        }
+                // Match upstream provider logic: collect by (season, episode) first,
+                // then sort the keys numerically before creating Episode objects.
+                const seasonItems = doc.select("div.season-item");
+                if (seasonItems.length > 0) {
+                    seasonItems.forEach(seasonItem => {
+                        const seasonText = seasonItem.find(".episode-number")?.textContent()?.trim() || "";
+                        const seasonNum = parseSeasonNumber(seasonText) || 1;
+                        seasonItem.select(".episode-download-item").forEach(item => {
+                            const epTitle = item.find(".episode-file-title")?.textContent()?.trim() || "";
+                            const badgeText = item.find(".badge-psa")?.textContent()?.trim() || "";
+                            const epNum = parseEpisodeNumber(badgeText, epTitle);
+                            const links = item.select("a")
+                                .map(a => ({
+                                    name: a.textContent().trim(),
+                                    url: a.attr("href")
+                                }))
+                                .filter(link => isSupportedEpisodeLink(link.url));
+
+                            addEpisodeEntry(episodeMap, seasonNum, epNum, epTitle, links);
+                        });
                     });
                 } else {
-                    // Fallback to legacy link extraction
-                    doc.select("a").forEach(a => {
-                        const href = a.attr("href");
-                        if (href && (href.includes("episode") || href.includes("season"))) {
-                            episodes.push(new Episode({
+                    const epItems = doc.select(".episode-download-item");
+                    epItems.forEach(item => {
+                        const epTitle = item.find(".episode-file-title")?.textContent()?.trim() || "";
+                        const badgeText = item.find(".badge-psa")?.textContent()?.trim() || "";
+                        const parentText = item.parent?.textContent?.() || "";
+                        const grandParentText = item.parent?.parent?.textContent?.() || "";
+                        const seasonNum = parseSeasonNumber(parentText, grandParentText) || 1;
+                        const epNum = parseEpisodeNumber(badgeText, epTitle);
+                        const links = item.select("a")
+                            .map(a => ({
                                 name: a.textContent().trim(),
-                                url: fixUrl(href),
-                                posterUrl: poster
-                            }));
-                        }
+                                url: a.attr("href")
+                            }))
+                            .filter(link => isSupportedEpisodeLink(link.url));
+
+                        addEpisodeEntry(episodeMap, seasonNum, epNum, epTitle, links);
+                    });
+                }
+
+                let episodes = buildSortedEpisodes(episodeMap, poster);
+
+                if (episodes.length === 0) {
+                    const fallbackEpisodes = [];
+                    const seenUrls = new Set();
+
+                    doc.select("a").forEach((a, index) => {
+                        const href = fixUrl(a.attr("href"));
+                        const name = a.textContent().trim() || "Episode";
+                        if (!href || seenUrls.has(href)) return;
+                        if (!(href.includes("episode") || href.includes("season") || /s\d+e\d+/i.test(name) || /episode/i.test(name))) return;
+
+                        seenUrls.add(href);
+                        fallbackEpisodes.push({
+                            name,
+                            url: href,
+                            season: parseSeasonNumber(name, href),
+                            episode: parseEpisodeNumber(name, href),
+                            index
+                        });
+                    });
+
+                    fallbackEpisodes.sort((a, b) => {
+                        const seasonA = a.season ?? Number.MAX_SAFE_INTEGER;
+                        const seasonB = b.season ?? Number.MAX_SAFE_INTEGER;
+                        if (seasonA !== seasonB) return seasonA - seasonB;
+
+                        const episodeA = a.episode ?? Number.MAX_SAFE_INTEGER;
+                        const episodeB = b.episode ?? Number.MAX_SAFE_INTEGER;
+                        if (episodeA !== episodeB) return episodeA - episodeB;
+
+                        return a.index - b.index;
+                    });
+
+                    episodes = fallbackEpisodes.map(item => {
+                        const data = {
+                            name: item.name,
+                            url: item.url,
+                            posterUrl: poster
+                        };
+                        if (item.season) data.season = item.season;
+                        if (item.episode) data.episode = item.episode;
+                        return new Episode(data);
                     });
                 }
                 
