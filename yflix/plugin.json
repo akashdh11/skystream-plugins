@@ -1,7 +1,7 @@
 {
   "packageName": "dev.akash.stars.yflix",
   "name": "Yflix",
-  "version": 3,
+  "version": 4,
   "baseUrl": "https://yflix.to",
   "description": "Yflix Movie Provider",
   "authors": ["phisher"],

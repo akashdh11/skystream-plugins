@@ -150,6 +150,135 @@
         return url;
     }
 
+    function cleanText(value) {
+        return unescapeHTML(String(value || ""))
+            .replace(/\s+/g, " ")
+            .trim();
+    }
+
+    function isStreamHost(url) {
+        const value = String(url || "").toLowerCase();
+        return value.includes("gadgetsweb.xyz")
+            || value.includes("hubcloud")
+            || value.includes("hubdrive")
+            || value.includes("hubcdn")
+            || value.includes("drive.google.com");
+    }
+
+    function detectSourceName(url, fallback = "Auto") {
+        const value = String(url || "").toLowerCase();
+        if (value.includes("hubcloud")) return "HubCloud";
+        if (value.includes("hubdrive")) return "HubDrive";
+        if (value.includes("hubcdn")) return "HubCDN";
+        if (value.includes("drive.google.com")) return "GDrive";
+        if (value.includes("gadgetsweb.xyz")) return fallback;
+        return fallback;
+    }
+
+    function parseQuality(value) {
+        const text = cleanText(value).toLowerCase();
+        const match = text.match(/\b(2160|1440|1080|720|576|480|360)p\b/i);
+        if (match) return parseInt(match[1], 10);
+        if (/\b(?:4k|uhd)\b/i.test(text)) return 2160;
+        return 0;
+    }
+
+    function qualityLabel(quality) {
+        const q = parseInt(quality, 10);
+        return q > 0 ? `${q}p` : "";
+    }
+
+    function normalizeSourceName(value) {
+        return cleanText(value)
+            .replace(/download/ig, "")
+            .replace(/[\[\]]/g, "")
+            .replace(/&nbsp;/ig, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+    }
+
+    function sourceWithQuality(source, quality) {
+        const label = normalizeSourceName(source) || "Auto";
+        const qLabel = qualityLabel(quality);
+        if (!qLabel) return label;
+
+        const cleanLabel = label
+            .replace(/\b(?:2160|1440|1080|720|576|480|360)p\b/ig, "")
+            .replace(/\s+/g, " ")
+            .trim();
+
+        return `${cleanLabel || label} ${qLabel}`.trim();
+    }
+
+    function parseSeasonNumber(value) {
+        const text = cleanText(value);
+        return parseInt(text.match(/\bS(?:eason)?\s*0*(\d+)/i)?.[1] || text.match(/\bSeason\s*0*(\d+)/i)?.[1] || "", 10) || 0;
+    }
+
+    function parseEpisodeNumber(value) {
+        const text = cleanText(value);
+        return parseInt(
+            text.match(/\bS\d+\s*E0*(\d+)/i)?.[1]
+            || text.match(/\bEpisode[-\s]*0*(\d+)/i)?.[1]
+            || text.match(/\bE0*(\d+)\b/i)?.[1]
+            || "",
+            10
+        ) || 0;
+    }
+
+    function findAncestor(node, selector) {
+        let current = node;
+        while (current) {
+            if (current.matches && current.matches(selector)) return current;
+            current = current.parent;
+        }
+        return null;
+    }
+
+    function linkFromAnchor(anchor, context) {
+        const href = fixUrl(anchor.attr("href"));
+        if (!href || !isStreamHost(href)) return null;
+
+        const rawName = normalizeSourceName(anchor.textContent()) || detectSourceName(href);
+        const quality = parseQuality(`${context || ""} ${rawName} ${href}`);
+        const source = sourceWithQuality(detectSourceName(href, rawName), quality);
+
+        return {
+            name: source,
+            source,
+            url: href,
+            quality: quality || undefined
+        };
+    }
+
+    function extractNodeLinks(node, context) {
+        const links = [];
+        const seen = new Set();
+        node.select("a").forEach(anchor => {
+            const link = linkFromAnchor(anchor, context);
+            if (!link || seen.has(link.url)) return;
+            seen.add(link.url);
+            links.push(link);
+        });
+        return links;
+    }
+
+    function addDistinctLinks(target, links) {
+        const seen = new Set(target.map(link => link.url));
+        links.forEach(link => {
+            if (link.url && !seen.has(link.url)) {
+                seen.add(link.url);
+                target.push(link);
+            }
+        });
+    }
+
+    function compareEpisodes(a, b) {
+        if ((a.season || 0) !== (b.season || 0)) return (a.season || 0) - (b.season || 0);
+        if ((a.episode || 0) !== (b.episode || 0)) return (a.episode || 0) - (b.episode || 0);
+        return String(a.name || "").localeCompare(String(b.name || ""), undefined, { numeric: true });
+    }
+
     function parseRes(html) {
         const doc = new JsoupLite(html);
         const items = [];
@@ -240,16 +369,32 @@
             const isSeries = url.includes("-series-") || doc.root.textContent().includes("Download Individual Episodes") || !!doc.find(".episode-download-item");
 
             if (!isSeries) {
-                const linksRegex = /href="(https?:\/\/(?:gadgetsweb\.xyz|hubcloud|hubdrive|drive\.google\.com)[^"]+)"/gi;
-                const movieLinks = [];
-                let m;
-                const seenUrls = new Set();
-                while ((m = linksRegex.exec(res.body)) !== null) {
-                    const url = m[1];
-                    if (!seenUrls.has(url)) {
-                        seenUrls.add(url);
-                        movieLinks.push({ name: "Direct", url: fixUrl(url) });
+                const movieGroups = [];
+                const movieSeen = new Set();
+
+                doc.select(".download-item").forEach(item => {
+                    const fileTitle = cleanText(item.find(".file-title")?.textContent()) || title;
+                    const links = extractNodeLinks(item, fileTitle);
+                    if (links.length === 0) return;
+
+                    const quality = parseQuality(fileTitle);
+                    const groupName = qualityLabel(quality) || fileTitle || "Direct";
+                    movieGroups.push({ name: groupName, quality: quality || undefined, links });
+                    links.forEach(link => movieSeen.add(link.url));
+                });
+
+                if (movieGroups.length === 0) {
+                    const linksRegex = /href="(https?:\/\/(?:gadgetsweb\.xyz|hubcloud|hubdrive|hubcdn|drive\.google\.com)[^"]+)"/gi;
+                    const fallbackLinks = [];
+                    let match;
+                    while ((match = linksRegex.exec(res.body)) !== null) {
+                        const streamUrl = fixUrl(match[1]);
+                        if (!streamUrl || movieSeen.has(streamUrl)) continue;
+                        movieSeen.add(streamUrl);
+                        const source = sourceWithQuality(detectSourceName(streamUrl, "Direct"), parseQuality(streamUrl));
+                        fallbackLinks.push({ name: source, source, url: streamUrl });
                     }
+                    if (fallbackLinks.length > 0) movieGroups.push({ name: "Direct", links: fallbackLinks });
                 }
                 
                 cb({
@@ -264,42 +409,81 @@
                             name: "Full Movie", 
                             season: 1, 
                             episode: 1, 
-                            url: JSON.stringify([{ name: "Direct", links: movieLinks }]), 
+                            url: JSON.stringify(movieGroups), 
                             posterUrl: poster 
                         })]
                     })
                 });
             } else {
-                const episodes = [];
-                // Handle new series layout with collapsible episodes
+                const episodesMap = new Map();
+                const maxEpisodePerSeason = {};
+
                 const epItems = doc.select(".episode-download-item");
                 if (epItems.length > 0) {
                     epItems.forEach(item => {
-                        const epTitle = item.find(".episode-file-title")?.textContent()?.trim() || "Episode";
-                        const epNum = parseInt(item.find(".badge-psa")?.textContent()?.match(/Episode-(\d+)/i)?.[1]) || 1;
-                        const seasonNum = parseInt(item.parent?.parent?.find(".episode-number")?.textContent()?.match(/S(\d+)/i)?.[1]) || 1;
-                        const links = item.select("a.btn").map(a => ({
-                            name: a.textContent().trim(),
-                            url: fixUrl(a.attr("href"))
-                        })).filter(l => l.url && (l.url.includes("gadgetsweb.xyz") || l.url.includes("hubcloud") || l.url.includes("drive")));
+                        const epTitle = cleanText(item.find(".episode-file-title")?.textContent()) || "Episode";
+                        const seasonItem = findAncestor(item, ".season-item");
+                        const seasonText = cleanText(seasonItem?.find(".episode-number")?.textContent());
+                        const seasonNum = parseSeasonNumber(seasonText) || parseSeasonNumber(epTitle) || 1;
+                        const epNum = parseEpisodeNumber(item.find(".badge-psa")?.textContent()) || parseEpisodeNumber(epTitle);
+                        if (!epNum) return;
 
-                        if (links.length > 0) {
-                            episodes.push(new Episode({
-                                name: epTitle,
-                                season: seasonNum,
-                                episode: epNum,
-                                url: JSON.stringify([{ name: epTitle, links }]),
-                                posterUrl: poster
-                            }));
-                        }
+                        const links = extractNodeLinks(item, epTitle);
+                        if (links.length === 0) return;
+
+                        const key = `${seasonNum}:${epNum}`;
+                        const entry = episodesMap.get(key) || {
+                            season: seasonNum,
+                            episode: epNum,
+                            name: `Episode ${epNum}`,
+                            links: []
+                        };
+
+                        addDistinctLinks(entry.links, links);
+                        episodesMap.set(key, entry);
+                        maxEpisodePerSeason[seasonNum] = Math.max(maxEpisodePerSeason[seasonNum] || 0, epNum);
                     });
-                } else {
-                    // Fallback to legacy link extraction
+                }
+
+                doc.select(".download-item").forEach(item => {
+                    const headerText = cleanText(item.find(".font-semibold")?.textContent() || item.textContent());
+                    const seasonNum = parseSeasonNumber(headerText);
+                    if (!seasonNum) return;
+
+                    const fileTitle = cleanText(item.find(".file-title")?.textContent());
+                    const links = extractNodeLinks(item, `${headerText} ${fileTitle}`);
+                    if (links.length === 0) return;
+
+                    const nextEpisode = (maxEpisodePerSeason[seasonNum] || 0) + 1;
+                    const key = `${seasonNum}:${nextEpisode}`;
+                    const quality = qualityLabel(parseQuality(`${headerText} ${fileTitle}`));
+                    const name = `S${String(seasonNum).padStart(2, "0")} Pack ${quality}`.trim();
+
+                    episodesMap.set(key, {
+                        season: seasonNum,
+                        episode: nextEpisode,
+                        name,
+                        links
+                    });
+                    maxEpisodePerSeason[seasonNum] = nextEpisode;
+                });
+
+                const episodes = Array.from(episodesMap.values())
+                    .sort(compareEpisodes)
+                    .map(item => new Episode({
+                        name: item.name,
+                        season: item.season,
+                        episode: item.episode,
+                        url: JSON.stringify([{ name: item.name, links: item.links }]),
+                        posterUrl: poster
+                    }));
+
+                if (episodes.length === 0) {
                     doc.select("a").forEach(a => {
                         const href = a.attr("href");
                         if (href && (href.includes("episode") || href.includes("season"))) {
                             episodes.push(new Episode({
-                                name: a.textContent().trim(),
+                                name: cleanText(a.textContent()),
                                 url: fixUrl(href),
                                 posterUrl: poster
                             }));
@@ -316,60 +500,96 @@
 
     async function loadStreams(dataStr, cb) {
         try {
-            let data;
-            try { data = JSON.parse(dataStr); } catch { data = [{ links: [{ url: dataStr, name: "Auto" }] }]; }
-            const results = [];
-            const queue = [];
-            const seen = new Set();
-
-            data.forEach(item => {
-                if (!item || !item.links) return;
-                item.links.forEach(link => {
-                    if (link.url && !seen.has(link.url)) {
-                        seen.add(link.url);
-                        queue.push(link);
-                    }
-                });
-            });
+            const data = normalizeStreamData(dataStr);
+            const queue = buildStreamQueue(data);
 
             if (queue.length === 0) return cb({ success: true, data: [] });
 
-            let processed = 0;
+            const results = [];
+            const seenResults = new Set();
             for (const link of queue) {
-                const processUrl = async (url, name) => {
-                    if (url.includes("gadgetsweb.xyz") || url.includes("id=")) {
-                        const resolved = await getRedirectLinks(url);
-                        if (resolved) await extractFinal(resolved, name);
-                    } else {
-                        await extractFinal(url, name);
-                    }
-                };
+                const resolvedUrl = await resolveRedirectUrl(link.url);
+                if (!resolvedUrl) continue;
 
-                const extractFinal = async (url, name) => {
-                    if (url.includes("hubcloud") || url.includes("hubdrive")) {
-                        await extractHubCloud(url, (extracted) => {
-                            if (extracted) results.push(...extracted.map(e => new StreamResult({
-                                url: e.url,
-                                source: e.source || "Auto",
-                                headers: CommonHeaders
-                            })));
-                        });
-                    } else {
-                        results.push(new StreamResult({
-                            url: url,
-                            source: name || "Auto",
-                            headers: CommonHeaders
-                        }));
-                    }
-                };
-
-                await processUrl(link.url, link.name);
-                processed++;
-                if (processed === queue.length) cb({ success: true, data: results });
+                const extracted = await resolveStreamLink(resolvedUrl, link);
+                extracted.forEach(result => {
+                    const key = result.url;
+                    if (!key || seenResults.has(key)) return;
+                    seenResults.add(key);
+                    results.push(result);
+                });
             }
+
+            results.sort((a, b) => (b.quality || 0) - (a.quality || 0) || String(a.source || "").localeCompare(String(b.source || "")));
+            cb({ success: true, data: results });
         } catch (e) {
             cb({ success: false, errorCode: "STREAM_ERROR", message: e.message });
         }
+    }
+
+    function normalizeStreamData(dataStr) {
+        try {
+            const parsed = JSON.parse(dataStr);
+            if (Array.isArray(parsed)) return parsed;
+            if (parsed && typeof parsed === "object") return [parsed];
+        } catch {}
+        return [{ name: "Auto", links: [{ url: dataStr, name: "Auto" }] }];
+    }
+
+    function buildStreamQueue(groups) {
+        const queue = [];
+        const seen = new Set();
+
+        groups.forEach(group => {
+            const links = Array.isArray(group?.links) ? group.links : [];
+            const groupQuality = parseInt(group?.quality, 10) || parseQuality(group?.name);
+
+            links.forEach(link => {
+                const url = fixUrl(link?.url);
+                if (!url || seen.has(url)) return;
+
+                const quality = parseInt(link?.quality, 10) || parseQuality(`${link?.name || ""} ${group?.name || ""} ${url}`) || groupQuality;
+                const fallback = normalizeSourceName(link?.source || link?.name || group?.name) || detectSourceName(url);
+                const source = sourceWithQuality(detectSourceName(url, fallback), quality);
+
+                seen.add(url);
+                queue.push({ url, source, quality });
+            });
+        });
+
+        return queue;
+    }
+
+    async function resolveRedirectUrl(url) {
+        if (url.includes("gadgetsweb.xyz") || url.includes("id=")) {
+            return await getRedirectLinks(url);
+        }
+        return url;
+    }
+
+    async function resolveStreamLink(url, link) {
+        if (url.includes("hubcloud") || url.includes("hubdrive")) {
+            const extracted = await extractHubCloudStreams(url, link.source, link.quality);
+            if (extracted.length > 0) return extracted.map(item => toStreamResult(item, link));
+        }
+
+        return [toStreamResult({ url, source: link.source, quality: link.quality }, link)];
+    }
+
+    function toStreamResult(item, fallback) {
+        const quality = parseInt(item.quality, 10) || parseInt(fallback.quality, 10) || parseQuality(`${item.source || ""} ${fallback.source || ""} ${item.url || ""}`);
+        return new StreamResult({
+            url: item.url,
+            source: sourceWithQuality(item.source || fallback.source || "Auto", quality),
+            quality: quality || undefined,
+            headers: CommonHeaders
+        });
+    }
+
+    function extractHubCloudStreams(url, source, quality) {
+        return new Promise(resolve => {
+            extractHubCloud(url, extracted => resolve(Array.isArray(extracted) ? extracted : []), source, quality);
+        });
     }
 
     function base64Decode(str) {
@@ -408,7 +628,7 @@
         } catch { return ""; }
     }
 
-    async function extractHubCloud(url, callback) {
+    async function extractHubCloud(url, callback, sourceName = "HubCloud", qualityHint = 0) {
         try {
             const headers = { ...CommonHeaders, "Cookie": "xla=s4t" };
             const res = await http_get(url, headers);
@@ -418,31 +638,46 @@
             
             // Check if we're already on a page with download buttons (like gamerxyt)
             if (url.includes("gamerxyt.com") || res.body.includes("Download Link Generated")) {
-                return extractFinalButtons(res.body, callback);
+                return extractFinalButtons(res.body, callback, sourceName, qualityHint);
             }
 
             const nextUrl = fixUrl(doc.find("#download")?.attr("href") || "");
             if (nextUrl) {
                 const res2 = await http_get(nextUrl, { ...headers, "Referer": url });
                 if (res2 && res2.body) {
-                    return extractFinalButtons(res2.body, callback);
+                    return extractFinalButtons(res2.body, callback, sourceName, qualityHint);
                 }
             }
             callback([]);
         } catch { callback([]); }
     }
 
-    function extractFinalButtons(html, callback) {
+    function extractFinalButtons(html, callback, sourceName = "HubCloud", qualityHint = 0) {
         const doc = new JsoupLite(html);
         const extracted = [];
-        const qMatch = html.match(/(\d{3,4})[pP]/);
-        const q = qMatch ? qMatch[1] + "p" : "HD";
+        const header = cleanText(doc.find(".card-header")?.textContent()) || cleanText(doc.find("h1")?.textContent());
+        const quality = parseInt(qualityHint, 10) || parseQuality(header) || parseQuality(html);
 
         doc.select("a.btn").forEach(el => {
-            const label = el.textContent().trim();
+            const label = normalizeSourceName(el.textContent());
+            const lowerLabel = label.toLowerCase();
             const link = el.attr("href");
-            if (link && (label.toLowerCase().includes("download") || el.attr("class").includes("btn-success"))) {
-                extracted.push({ url: link, source: label.replace(/Download|\[|\]/gi, "").trim() || q });
+            if (link && (lowerLabel.includes("download") || el.attr("class").includes("btn-success"))) {
+                let source = sourceName;
+                if (lowerLabel.includes("fsl server")) source = `${sourceName} FSL Server`;
+                else if (lowerLabel.includes("buzzserver")) source = `${sourceName} BuzzServer`;
+                else if (lowerLabel.includes("pixel")) source = `${sourceName} Pixeldrain`;
+                else if (lowerLabel.includes("s3 server")) source = `${sourceName} S3 Server`;
+                else if (lowerLabel.includes("fslv2")) source = `${sourceName} FSLv2`;
+                else if (lowerLabel.includes("mega server")) source = `${sourceName} Mega Server`;
+                else if (lowerLabel.includes("pdl server")) source = `${sourceName} PDL Server`;
+                else if (label && !lowerLabel.includes("download file")) source = `${sourceName} ${label}`;
+
+                extracted.push({
+                    url: fixUrl(link),
+                    source: sourceWithQuality(source, quality),
+                    quality: quality || undefined
+                });
             }
         });
         callback(extracted);
