@@ -6,5 +6,9 @@
   "description": "Yflix Movie Provider",
   "authors": ["phisher"],
   "languages": ["en"],
-  "categories": ["Movie", "TvSeries"]
+  "categories": ["Movie", "TvSeries"],
+  "domains": [
+    { "name": "yflix.to", "url": "https://yflix.to" },
+    { "name": "1moviesz.to", "url": "https://1moviesz.to" }
+  ]
 }
