@@ -324,6 +324,16 @@
       "Movie",
       "TvSeries"
     ],
+    "domains": [
+      {
+        "name": "yflix.to",
+        "url": "https://yflix.to"
+      },
+      {
+        "name": "1moviesz.to",
+        "url": "https://1moviesz.to"
+      }
+    ],
     "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.yflix.sky"
   },
   {
