@@ -1,7 +1,7 @@
 {
   "packageName": "dev.akash.stars.yflix",
   "name": "Yflix",
-  "version": 4,
+  "version": 5,
   "baseUrl": "https://yflix.to",
   "description": "Yflix Movie Provider",
   "authors": ["phisher"],
@@ -9,6 +9,18 @@
   "categories": ["Movie", "TvSeries"],
   "domains": [
     { "name": "yflix.to", "url": "https://yflix.to" },
-    { "name": "1moviesz.to", "url": "https://1moviesz.to" }
+    { "name": "1moviesz.to", "url": "https://1moviesz.to" },
+    { "name": "solarmovie.fi", "url": "https://solarmovie.fi" },
+    { "name": "sflix.fi", "url": "https://sflix.fi" },
+    { "name": "movhub.ws", "url": "https://movhub.ws" },
+    { "name": "flixtor.mov", "url": "https://flixtor.mov" },
+    { "name": "lokkmovie.fi", "url": "https://lokkmovie.fi" },
+    { "name": "bflix.la", "url": "https://bflix.la" },
+    { "name": "myflixer.fi", "url": "https://myflixer.fi" },
+    { "name": "123moviesfree.bz", "url": "https://123moviesfree.bz" },
+    { "name": "hurawatch.la", "url": "https://hurawatch.la" },
+    { "name": "soap2day.fi", "url": "https://soap2day.fi" },
+    { "name": "myflixer.bz", "url": "https://myflixer.bz" },
+    { "name": "watchseries.st", "url": "https://watchseries.st" }
   ]
 }
