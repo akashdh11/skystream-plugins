@@ -723,8 +723,6 @@
                 })];
             }
             if (hostname.includes("hdstream4u")) {
-                const results = await internalLoadExtractor(url); // Recursive load might be needed for VidHidePro
-                if (results.length > 0) return results;
                 return [new StreamResult({ source: "HdStream4u", url: url })];
             }
             return [];
@@ -771,26 +769,24 @@
                 }
             }
             
-            const results = await Promise.all(uniqueLinks.map(async (lObj) => {
+            for (const lObj of uniqueLinks) {
                 try {
                     const lUrl = lObj.url;
                     const lName = lObj.name || "";
                     console.log("HDHub4U: Extracting from: " + lUrl + " (name: " + lName + ")");
                     const streams = await internalLoadExtractor(lUrl);
-                    
+
                     // Apply quality formatting based on original link name
-                    return streams.map(s => {
+                    streams.forEach(s => {
                         let finalQuality = s.quality && s.quality !== "Unknown" ? s.quality : "";
-                        
-                        // Extract resolution from the initial name if not set
+
                         const resMatch = lName.match(/(2160p|1080p|720p|480p|360p|4K|8K)/i);
                         if (resMatch && !finalQuality) {
                             finalQuality = resMatch[1];
                         }
-                        
-                        // Extract extra info brackets [size]
+
                         const extMatch = lName.match(/\[(.*?)\]/);
-                        let extInfo = extMatch ? ` ${extMatch[0]}` : "";
+                        const extInfo = extMatch ? ` ${extMatch[0]}` : "";
 
                         let sourceLabel = s.source;
                         if (finalQuality && !sourceLabel.includes(finalQuality)) {
@@ -801,15 +797,12 @@
                         }
 
                         s.source = sourceLabel;
-                        return s;
+                        allResults.push(s);
                     });
                 } catch (e) {
                     console.error("HDHub4U: Extraction error for " + lObj.url + ": " + e.message);
-                    return [];
                 }
-            }));
-
-            results.forEach(res => allResults.push(...res));
+            }
 
             // Deduplicate final results by URL
             const seen = new Set();
