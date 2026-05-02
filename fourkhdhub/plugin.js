@@ -150,6 +150,17 @@
         return url;
     }
 
+    function resolveUrl(url, base) {
+        if (!url) return "";
+        if (/^https?:\/\//i.test(url)) return url;
+        if (url.startsWith("//")) return "https:" + url;
+        try {
+            return new URL(url, base || manifest.baseUrl).toString();
+        } catch {
+            return fixUrl(url);
+        }
+    }
+
     function cleanText(value) {
         return unescapeHTML(String(value || ""))
             .replace(/\s+/g, " ")
@@ -271,6 +282,34 @@
                 target.push(link);
             }
         });
+    }
+
+    function selectMany(doc, selectors) {
+        const out = [];
+        const seen = new Set();
+        selectors.forEach(selector => {
+            doc.select(selector).forEach(node => {
+                if (seen.has(node)) return;
+                seen.add(node);
+                out.push(node);
+            });
+        });
+        return out;
+    }
+
+    function parseDynamicHrefMap(html, base) {
+        const map = {};
+        const patterns = [
+            /\$\(\s*['"]#([^'"]+)['"]\s*\)\.attr\(\s*['"]href['"]\s*,\s*['"]([^'"]+)['"]\s*\)/gi,
+            /document\.getElementById\(\s*['"]([^'"]+)['"]\s*\)\.href\s*=\s*['"]([^'"]+)['"]/gi
+        ];
+        patterns.forEach(pattern => {
+            let match;
+            while ((match = pattern.exec(html)) !== null) {
+                map[match[1]] = resolveUrl(match[2], base);
+            }
+        });
+        return map;
     }
 
     function compareEpisodes(a, b) {
@@ -568,7 +607,7 @@
     }
 
     async function resolveStreamLink(url, link) {
-        if (url.includes("hubcloud") || url.includes("hubdrive")) {
+        if (url.includes("hubcloud")) {
             const extracted = await extractHubCloudStreams(url, link.source, link.quality);
             if (extracted.length > 0) return extracted.map(item => toStreamResult(item, link));
         }
@@ -630,57 +669,91 @@
 
     async function extractHubCloud(url, callback, sourceName = "HubCloud", qualityHint = 0) {
         try {
-            const headers = { ...CommonHeaders, "Cookie": "xla=s4t" };
-            const res = await http_get(url, headers);
+            let currentUrl = String(url || "").replace("hubcloud.ink", "hubcloud.dad");
+            const headers = { ...CommonHeaders, "Cookie": "xla=s4t", "Referer": currentUrl };
+            const res = await http_get(currentUrl, headers);
             if (!res || !res.body) return callback([]);
-            
-            const doc = new JsoupLite(res.body);
-            
-            // Check if we're already on a page with download buttons (like gamerxyt)
-            if (url.includes("gamerxyt.com") || res.body.includes("Download Link Generated")) {
-                return extractFinalButtons(res.body, callback, sourceName, qualityHint);
-            }
 
-            const nextUrl = fixUrl(doc.find("#download")?.attr("href") || "");
-            if (nextUrl) {
-                const res2 = await http_get(nextUrl, { ...headers, "Referer": url });
-                if (res2 && res2.body) {
-                    return extractFinalButtons(res2.body, callback, sourceName, qualityHint);
+            let pageData = res.body;
+            let finalUrl = currentUrl;
+
+            if (!currentUrl.includes("hubcloud.php")) {
+                const firstDoc = new JsoupLite(pageData);
+                let nextHref = firstDoc.find("#download")?.attr("href") || "";
+                if (!nextHref) {
+                    const scriptUrlMatch = pageData.match(/var url = '([^']*)'/);
+                    if (scriptUrlMatch) nextHref = scriptUrlMatch[1];
+                }
+
+                if (nextHref) {
+                    nextHref = resolveUrl(nextHref, currentUrl);
+                    finalUrl = nextHref;
+                    const res2 = await http_get(finalUrl, { ...CommonHeaders, "Cookie": "xla=s4t", "Referer": currentUrl });
+                    if (res2 && res2.body) pageData = res2.body;
                 }
             }
+
+            const extracted = extractFinalButtons(pageData, sourceName, qualityHint, finalUrl);
+            callback(extracted);
+        } catch {
             callback([]);
-        } catch { callback([]); }
+        }
     }
 
-    function extractFinalButtons(html, callback, sourceName = "HubCloud", qualityHint = 0) {
+    function extractFinalButtons(html, sourceName = "HubCloud", qualityHint = 0, baseUrl = manifest.baseUrl) {
         const doc = new JsoupLite(html);
         const extracted = [];
+        const seen = new Set();
+        const dynamicHrefMap = parseDynamicHrefMap(html, baseUrl);
         const header = cleanText(doc.find(".card-header")?.textContent()) || cleanText(doc.find("h1")?.textContent());
+        const size = cleanText(doc.find("#size")?.textContent());
         const quality = parseInt(qualityHint, 10) || parseQuality(header) || parseQuality(html);
+        const labelExtras = `${header ? `[${header}]` : ""}${size ? `[${size}]` : ""}`.trim();
 
-        doc.select("a.btn").forEach(el => {
+        const buttons = selectMany(doc, [
+            "a.btn",
+            "a.btn-lg",
+            "a.btn-primary",
+            "a.btn-success",
+            "a.btn-danger",
+            "a"
+        ]);
+        buttons.forEach(el => {
+            const href = resolveUrl(dynamicHrefMap[el.attr("id")] || el.attr("href"), baseUrl);
             const label = normalizeSourceName(el.textContent());
             const lowerLabel = label.toLowerCase();
-            const link = el.attr("href");
-            if (link && (lowerLabel.includes("download") || el.attr("class").includes("btn-success"))) {
-                let source = sourceName;
-                if (lowerLabel.includes("fsl server")) source = `${sourceName} FSL Server`;
-                else if (lowerLabel.includes("buzzserver")) source = `${sourceName} BuzzServer`;
-                else if (lowerLabel.includes("pixel")) source = `${sourceName} Pixeldrain`;
-                else if (lowerLabel.includes("s3 server")) source = `${sourceName} S3 Server`;
-                else if (lowerLabel.includes("fslv2")) source = `${sourceName} FSLv2`;
-                else if (lowerLabel.includes("mega server")) source = `${sourceName} Mega Server`;
-                else if (lowerLabel.includes("pdl server")) source = `${sourceName} PDL Server`;
-                else if (label && !lowerLabel.includes("download file")) source = `${sourceName} ${label}`;
+            if (!href || /telegram|facebook|twitter|tinyurl|tutorial|logout|login|\/tg\/go/i.test(`${href} ${lowerLabel}`)) return;
+            if (!/hubcdn|hubcloud|hubdrive|pixeldrain|pixel|odyssey|fsl|buzz|zip|mega|gpdl|download/i.test(`${href} ${lowerLabel}`)) return;
 
-                extracted.push({
-                    url: fixUrl(link),
-                    source: sourceWithQuality(source, quality),
-                    quality: quality || undefined
-                });
+            let source = sourceName;
+            if (lowerLabel.includes("fsl server")) source = `${sourceName} [FSL]`;
+            else if (lowerLabel.includes("s3 server")) source = `${sourceName} [S3]`;
+            else if (lowerLabel.includes("fslv2")) source = `${sourceName} [FSLv2]`;
+            else if (lowerLabel.includes("mega server")) source = `${sourceName} [Mega]`;
+            else if (lowerLabel.includes("zipdisk")) source = `${sourceName} [ZipDisk]`;
+            else if (lowerLabel.includes("buzzserver")) source = "BuzzServer";
+            else if (lowerLabel.includes("10gbps")) source = "10Gbps";
+            else if (lowerLabel.includes("pixel")) source = "PixelDrain";
+            else if (label && !lowerLabel.includes("download file")) source = `${sourceName} ${label}`;
+
+            let finalUrl = href;
+            if (lowerLabel.includes("pixel") && !/api\/file|download/i.test(finalUrl)) {
+                const pixelId = (finalUrl.match(/\/(?:u|file)\/([^/?#]+)/i)?.[1] || finalUrl.split("/").pop() || "").trim();
+                if (pixelId) finalUrl = `https://pixeldrain.com/api/file/${pixelId}?download`;
             }
+
+            if (!/^https?:\/\//i.test(finalUrl) || seen.has(finalUrl)) return;
+            seen.add(finalUrl);
+            extracted.push({
+                url: finalUrl,
+                source: sourceWithQuality(source, quality),
+                quality: quality || undefined,
+                size: size || undefined,
+                name: `${source} ${labelExtras}`.trim()
+            });
         });
-        callback(extracted);
+
+        return extracted;
     }
 
     // Export to global scope
