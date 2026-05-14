@@ -38,7 +38,7 @@
   {
     "packageName": "dev.akash.stars.animesalt",
     "name": "Animesalt",
-    "version": 8,
+    "version": 9,
     "baseUrl": "https://animesalt.ac",
     "description": "Port of CloudStream Animesalt extension",
     "authors": [
