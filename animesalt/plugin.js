@@ -572,24 +572,13 @@
         try {
             const body = await getText(url, resolvedHeaders);
             if (!/#EXTM3U/i.test(body) || !/#EXT-X-STREAM-INF/i.test(body)) {
-                return [createStream(proxiedHlsUrl(url, resolvedHeaders), source, {}, fallbackQuality || qualityFromText(url, 0), undefined, "hls")];
+                return [createStream(proxifyUrl(url, resolvedHeaders, resolvedHeaders.Referer || resolvedHeaders.referer || "", [getHost(url)].filter(Boolean)), source, {}, fallbackQuality || qualityFromText(url, 0), "adaptive", "hls")];
             }
             const parsed = parseHlsMasterPlaylist(body, url);
-            if (!parsed.variants.length) {
-                return [createStream(proxiedHlsUrl(url, resolvedHeaders), source, {}, fallbackQuality || qualityFromText(url, 0), undefined, "hls")];
-            }
-            const streams = [];
-            const hasExternalAudio = parsed.variants.some((variant) => variant.attrs.AUDIO && parsed.media.AUDIO[variant.attrs.AUDIO]);
-            if (hasExternalAudio) {
-                streams.push(createStream(buildMagicM3u8(body, url, resolvedHeaders), source, {}, fallbackQuality || 0, "adaptive", "hls"));
-                return streams;
-            }
-            for (const variant of parsed.variants) {
-                streams.push(createStream(proxiedHlsUrl(variant.url, resolvedHeaders), source, {}, variant.quality || fallbackQuality, undefined, "hls"));
-            }
-            return streams.sort((a, b) => (b.quality || 0) - (a.quality || 0));
+            const bestQuality = parsed.variants.reduce((max, variant) => Math.max(max, variant.quality || 0), fallbackQuality || 0);
+            return [createStream(proxifyUrl(url, resolvedHeaders, resolvedHeaders.Referer || resolvedHeaders.referer || "", [getHost(url)].filter(Boolean)), source, {}, bestQuality || fallbackQuality || 0, "adaptive", "hls")];
         } catch (e) {
-            return [createStream(proxiedHlsUrl(url, resolvedHeaders), source, {}, fallbackQuality || qualityFromText(url, 0), undefined, "hls")];
+            return [createStream(proxifyUrl(url, resolvedHeaders, resolvedHeaders.Referer || resolvedHeaders.referer || "", [getHost(url)].filter(Boolean)), source, {}, fallbackQuality || qualityFromText(url, 0), "adaptive", "hls")];
         }
     }
 
