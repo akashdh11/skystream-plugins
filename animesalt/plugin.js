@@ -127,13 +127,78 @@
         return `${source}${badge}${suffix}`;
     }
 
-    function createStream(url, source, headers, quality, tag) {
-        return new StreamResult({
+    function encodeBase64String(value) {
+        const input = String(value || "");
+        try {
+            if (typeof btoa === "function") return btoa(input);
+        } catch (e) {}
+        try {
+            if (typeof Buffer !== "undefined") return Buffer.from(input, "binary").toString("base64");
+        } catch (e) {}
+        return "";
+    }
+
+    function proxifyUrl(url, headers, referer, mirrorHosts) {
+        return "MAGIC_PROXY_v2" + encodeBase64String(JSON.stringify({
+            url,
+            headers: headers || {},
+            options: {
+                referer: referer || "",
+                mirrorHosts: mirrorHosts || []
+            }
+        }));
+    }
+
+    function proxifyUrlV1(url) {
+        return "MAGIC_PROXY_v1" + encodeBase64String(String(url || ""));
+    }
+
+    function buildMagicM3u8(body, playlistUrl, headers) {
+        const lines = String(body || "").split(/\r?\n/);
+        const rewritten = [];
+        for (const rawLine of lines) {
+            const line = String(rawLine || "");
+            const trimmed = line.trim();
+            if (!trimmed) {
+                rewritten.push(line);
+                continue;
+            }
+            if (trimmed.charAt(0) === "#") {
+                rewritten.push(line.replace(/URI="([^"]+)"/ig, function (_, uri) {
+                    const absolute = fixUrl(uri, playlistUrl);
+                    return `URI="${proxifyUrlV1(absolute)}"`;
+                }));
+                continue;
+            }
+            const absoluteLine = fixUrl(trimmed, playlistUrl);
+            rewritten.push(proxifyUrlV1(absoluteLine));
+        }
+        return "magic_m3u8:" + encodeBase64String(rewritten.join("\n"));
+    }
+
+    function proxiedHlsUrl(url, headers) {
+        let mirrorHosts = [];
+        try {
+            mirrorHosts = [new URL(url).hostname];
+        } catch (e) {
+            mirrorHosts = [];
+        }
+        const referer = headers && (headers.Referer || headers.referer) ? (headers.Referer || headers.referer) : "";
+        return proxifyUrl(url, headers || {}, referer, mirrorHosts);
+    }
+
+    function createStream(url, source, headers, quality, tag, type) {
+        const stream = {
             url,
             source: streamName(source, quality, tag),
             quality: quality || undefined,
             headers: headers || { "User-Agent": UA }
-        });
+        };
+        if (type) stream.type = type;
+        if (stream.headers && (stream.headers.Referer || stream.headers.referer)) {
+            stream.referer = stream.headers.Referer || stream.headers.referer;
+        }
+        return new StreamResult(stream);
     }
 
     async function getText(url, headers) {
@@ -502,44 +567,29 @@
         return true;
     }
 
-    function buildVariantManifest(variant, parsed) {
-        const lines = ["#EXTM3U", "#EXT-X-VERSION:3"];
-        let usedMedia = false;
-        usedMedia = appendMediaGroupLines(lines, parsed.media, "AUDIO", variant.attrs.AUDIO) || usedMedia;
-        usedMedia = appendMediaGroupLines(lines, parsed.media, "SUBTITLES", variant.attrs.SUBTITLES) || usedMedia;
-        usedMedia = appendMediaGroupLines(lines, parsed.media, "CLOSED-CAPTIONS", variant.attrs["CLOSED-CAPTIONS"]) || usedMedia;
-        if (!usedMedia && (variant.attrs.AUDIO || variant.attrs.SUBTITLES || variant.attrs["CLOSED-CAPTIONS"])) return "";
-        lines.push(`#EXT-X-STREAM-INF:${serializeHlsAttributes(variant.attrs)}`);
-        lines.push(variant.url);
-        return "data:application/vnd.apple.mpegurl;charset=utf-8," + encodeURIComponent(lines.join("\n") + "\n");
-    }
-
     async function expandHlsStreams(url, source, headers, fallbackQuality) {
         const resolvedHeaders = headers || { "User-Agent": UA };
         try {
             const body = await getText(url, resolvedHeaders);
             if (!/#EXTM3U/i.test(body) || !/#EXT-X-STREAM-INF/i.test(body)) {
-                return [createStream(url, source, resolvedHeaders, fallbackQuality || qualityFromText(url, 0))];
+                return [createStream(proxiedHlsUrl(url, resolvedHeaders), source, {}, fallbackQuality || qualityFromText(url, 0), undefined, "hls")];
             }
             const parsed = parseHlsMasterPlaylist(body, url);
             if (!parsed.variants.length) {
-                return [createStream(url, source, resolvedHeaders, fallbackQuality || qualityFromText(url, 0))];
+                return [createStream(proxiedHlsUrl(url, resolvedHeaders), source, {}, fallbackQuality || qualityFromText(url, 0), undefined, "hls")];
             }
             const streams = [];
-            let needsMasterFallback = false;
-            for (const variant of parsed.variants) {
-                const playbackUrl = buildVariantManifest(variant, parsed);
-                if (!playbackUrl) {
-                    needsMasterFallback = true;
-                    streams.push(createStream(variant.url, source, resolvedHeaders, variant.quality || fallbackQuality));
-                    continue;
-                }
-                streams.push(createStream(playbackUrl, source, resolvedHeaders, variant.quality || fallbackQuality));
+            const hasExternalAudio = parsed.variants.some((variant) => variant.attrs.AUDIO && parsed.media.AUDIO[variant.attrs.AUDIO]);
+            if (hasExternalAudio) {
+                streams.push(createStream(buildMagicM3u8(body, url, resolvedHeaders), source, {}, fallbackQuality || 0, "adaptive", "hls"));
+                return streams;
             }
-            if (needsMasterFallback) streams.push(createStream(url, source, resolvedHeaders, fallbackQuality || 0, "master"));
+            for (const variant of parsed.variants) {
+                streams.push(createStream(proxiedHlsUrl(variant.url, resolvedHeaders), source, {}, variant.quality || fallbackQuality, undefined, "hls"));
+            }
             return streams.sort((a, b) => (b.quality || 0) - (a.quality || 0));
         } catch (e) {
-            return [createStream(url, source, resolvedHeaders, fallbackQuality || qualityFromText(url, 0))];
+            return [createStream(proxiedHlsUrl(url, resolvedHeaders), source, {}, fallbackQuality || qualityFromText(url, 0), undefined, "hls")];
         }
     }
 
