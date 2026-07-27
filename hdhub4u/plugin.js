@@ -14,6 +14,7 @@
             const json = JSON.parse(res.body || "{}");
             if (json.HDHUB4u) {
                 MAIN_URL = String(json.HDHUB4u).replace(/\/+$/, "");
+                HEADERS["Referer"] = `${MAIN_URL}/`;
             }
         } catch (_) {}
     }
@@ -214,26 +215,36 @@
 
     async function searchOnSite(query) {
         try {
-            const url = `${MAIN_URL}/?s=${encodeURIComponent(query)}`;
-            const res = await http_get(url, { headers: HEADERS });
-            const doc = await parseHtml(res.body);
-            return Array.from(doc.querySelectorAll('.recent-movies > li.thumb')).map(el => {
-                const a = el.querySelector('figcaption a');
-                if (!a) return null;
-                const titleText = a.textContent.trim();
-                let href = el.querySelector('figure a')?.getAttribute('href');
-                if (href && href.startsWith("/")) href = `${MAIN_URL}${href}`;
-                href = normalizeSiteUrl(href);
-                const poster = el.querySelector('figure img')?.getAttribute('src');
-                const isSeries = inferIsSeries(titleText, href, "");
-                return new MultimediaItem({
-                    title: titleText.replace(/\|.*$/, "").trim(),
-                    url: href,
-                    posterUrl: poster,
-                    type: isSeries ? "series" : "movie",
-                    contentType: isSeries ? "series" : "movie"
-                });
-            }).filter(Boolean);
+            const urls = [
+                `${MAIN_URL}/search/${encodeURIComponent(query)}`,
+                `${MAIN_URL}/?s=${encodeURIComponent(query)}`
+            ];
+            for (const url of urls) {
+                try {
+                    const res = await http_get(url, { headers: HEADERS });
+                    if (!res || !res.body) continue;
+                    const doc = await parseHtml(res.body);
+                    const items = Array.from(doc.querySelectorAll('.recent-movies > li.thumb, li.thumb, .movie-card')).map(el => {
+                        const a = el.querySelector('figcaption a') || el.querySelector('a');
+                        if (!a) return null;
+                        const titleText = a.textContent.trim();
+                        let href = el.querySelector('figure a')?.getAttribute('href') || a.getAttribute('href');
+                        if (href && href.startsWith("/")) href = `${MAIN_URL}${href}`;
+                        href = normalizeSiteUrl(href);
+                        const poster = el.querySelector('figure img')?.getAttribute('src') || el.querySelector('img')?.getAttribute('src');
+                        const isSeries = inferIsSeries(titleText, href, "");
+                        return new MultimediaItem({
+                            title: titleText.replace(/\|.*$/, "").trim(),
+                            url: href,
+                            posterUrl: poster,
+                            type: isSeries ? "series" : "movie",
+                            contentType: isSeries ? "series" : "movie"
+                        });
+                    }).filter(Boolean);
+                    if (items.length > 0) return items;
+                } catch (_) {}
+            }
+            return [];
         } catch (_) {
             return [];
         }
@@ -243,9 +254,15 @@
         try {
             await resolveBaseUrl();
             const today = (new Date()).toISOString().split("T")[0];
-            const searchUrl = `https://search.pingora.fyi/collections/post/documents/search?q=${encodeURIComponent(query)}&query_by=post_title,category&query_by_weights=4,2&sort_by=sort_by_date:desc&limit=15&highlight_fields=none&use_cache=true&page=1&analytics_tag=${today}`;
+            const searchUrl = `https://search.pingora.fyi/collections/post/documents/search?q=${encodeURIComponent(query)}&query_by=post_title,category,stars,director,imdb_id&query_by_weights=4,2,2,2,4&sort_by=sort_by_date:desc&limit=15&highlight_fields=none&use_cache=true&page=1&analytics_tag=${today}`;
 
-            const data = await fetchJson(searchUrl, HEADERS, {});
+            const requestHeaders = {
+                ...HEADERS,
+                "Referer": `${MAIN_URL}/`,
+                "Origin": MAIN_URL
+            };
+
+            const data = await fetchJson(searchUrl, requestHeaders, {});
 
             if (data && data.hits && data.hits.length > 0) {
                 const results = data.hits.map((hit) => {
@@ -368,9 +385,14 @@
             }
 
             const today = (new Date()).toISOString().split("T")[0];
-            const searchUrl = `https://search.pingora.fyi/collections/post/documents/search?q=&query_by=post_title,category&query_by_weights=4,2&sort_by=sort_by_date:desc&limit=50&highlight_fields=none&use_cache=true&page=1&analytics_tag=${today}`;
+            const searchUrl = `https://search.pingora.fyi/collections/post/documents/search?q=&query_by=post_title,category,stars,director,imdb_id&query_by_weights=4,2,2,2,4&sort_by=sort_by_date:desc&limit=50&highlight_fields=none&use_cache=true&page=1&analytics_tag=${today}`;
 
-            const data = await fetchJson(searchUrl, HEADERS, {});
+            const requestHeaders = {
+                ...HEADERS,
+                "Referer": `${MAIN_URL}/`,
+                "Origin": MAIN_URL
+            };
+            const data = await fetchJson(searchUrl, requestHeaders, {});
 
             if (data && data.hits && data.hits.length > 0) {
                 const categoryMap = {
