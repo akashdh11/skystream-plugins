@@ -203,13 +203,20 @@
             .trim();
     }
 
-    function isStreamHost(url) {
+    function isStreamHost(url, text = "") {
         const value = String(url || "").toLowerCase();
-        return value.includes("gadgetsweb.xyz")
-            || value.includes("hubcloud")
-            || value.includes("hubdrive")
-            || value.includes("hubcdn")
-            || value.includes("drive.google.com");
+        const t = String(text || "").toLowerCase();
+        if (!value || value.startsWith("#") || value.startsWith("javascript:")) return false;
+        if (/telegram|facebook|twitter|instagram|youtube|tutorial|snvhost|snaptube|winx|winexch|tinyurl|snacklink/i.test(value)) return false;
+
+        // Check known stream domains and redirect formats
+        if (value.includes("gadgetsweb") || value.includes("greenmotors") || value.includes("hubcloud") || value.includes("hubdrive") || value.includes("hubcdn") || value.includes("drive.google.com")) return true;
+        if (value.includes("?id=") || value.includes("&id=")) return true;
+
+        // Check anchor text / context
+        if (/hubcloud|hubdrive|hubcdn|gdrive|download|stream|server|direct|fsl|pixeldrain/i.test(t)) return true;
+
+        return false;
     }
 
     function detectSourceName(url, fallback = "Auto") {
@@ -218,7 +225,7 @@
         if (value.includes("hubdrive")) return "HubDrive";
         if (value.includes("hubcdn")) return "HubCDN";
         if (value.includes("drive.google.com")) return "GDrive";
-        if (value.includes("gadgetsweb.xyz")) return fallback;
+        if (value.includes("gadgetsweb") || value.includes("greenmotors") || value.includes("id=")) return fallback;
         return fallback;
     }
 
@@ -284,9 +291,10 @@
 
     function linkFromAnchor(anchor, context) {
         const href = fixUrl(anchor.attr("href"));
-        if (!href || !isStreamHost(href)) return null;
+        const rawText = anchor.textContent() || "";
+        if (!href || !isStreamHost(href, rawText)) return null;
 
-        const rawName = normalizeSourceName(anchor.textContent()) || detectSourceName(href);
+        const rawName = normalizeSourceName(rawText) || detectSourceName(href);
         const quality = parseQuality(`${context || ""} ${rawName} ${href}`);
         const source = sourceWithQuality(detectSourceName(href, rawName), quality);
 
@@ -675,7 +683,7 @@
                 });
 
                 if (movieGroups.length === 0) {
-                    const linksRegex = /href="(https?:\/\/(?:gadgetsweb\.xyz|hubcloud|hubdrive|hubcdn|drive\.google\.com)[^"]+)"/gi;
+                    const linksRegex = /href="(https?:\/\/(?:[a-z0-9-]+\.[a-z0-9-]+\/[^"]*[?&]id=|gadgetsweb|greenmotors|hubcloud|hubdrive|hubcdn|drive\.google\.com)[^"]+)"/gi;
                     const fallbackLinks = [];
                     let match;
                     while ((match = linksRegex.exec(res.body)) !== null) {
@@ -874,7 +882,7 @@
     }
 
     async function resolveRedirectUrl(url) {
-        if (url.includes("gadgetsweb.xyz") || url.includes("id=")) {
+        if (url.includes("gadgetsweb") || url.includes("greenmotors") || url.includes("id=")) {
             return await getRedirectLinks(url);
         }
         return url;
@@ -924,8 +932,8 @@
 
             const html = res.body;
 
-            // Strategy 1: Find hubcloud.cx/drive/ links in the page and process them
-            const hcRegex = /https?:\/\/hubcloud\.(?:cx|dad|ink)\/drive\/[a-z0-9]+/gi;
+            // Strategy 1: Find hubcloud links in the page and process them
+            const hcRegex = /https?:\/\/hubcloud\.[a-z0-9-]+\/drive\/[a-z0-9]+/gi;
             const hcMatches = html.match(hcRegex) || [];
             const uniqueHcUrls = [...new Set(hcMatches.map(u => u.replace(/[^a-zA-Z0-9:/._~-]/g, '')))];
 
