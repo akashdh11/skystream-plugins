@@ -1,0 +1,161 @@
+[
+  {
+    "packageName": "dev.akash.stars.4khd",
+    "name": "4K HD",
+    "version": 12,
+    "baseUrl": "https://4khdhub.one",
+    "description": "4K Movies and TV Shows (VOD)",
+    "authors": [
+      "phisher"
+    ],
+    "languages": [
+      "en"
+    ],
+    "categories": [
+      "Movie",
+      "TvSeries"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.4khd.sky"
+  },
+  {
+    "packageName": "dev.akash.stars.hdhub4u",
+    "name": "HDHub4U",
+    "version": 17,
+    "baseUrl": "https://new2.hdhub4u.limo",
+    "description": "Bollywood, Hollywood and Hindi Dubbed Movies & Web Series",
+    "authors": [
+      "phisher",
+      "Akash"
+    ],
+    "languages": [
+      "hi"
+    ],
+    "categories": [
+      "Movie",
+      "TvSeries"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.hdhub4u.sky"
+  },
+  {
+    "packageName": "dev.akash.stars.moviesdrive",
+    "name": "Movies Drive",
+    "version": 6,
+    "baseUrl": "https://new2.moviesdrives.my",
+    "domains": [
+      {
+        "name": "new2.moviesdrives.my",
+        "url": "https://new2.moviesdrives.my"
+      },
+      {
+        "name": "moviesdrive.forum",
+        "url": "https://moviesdrive.forum"
+      }
+    ],
+    "description": "Premium VOD Scraper with metadata sync",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "en",
+      "hi"
+    ],
+    "categories": [
+      "Movie",
+      "TvSeries"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.moviesdrive.sky"
+  },
+  {
+    "packageName": "dev.akash.stars.yflix",
+    "name": "Yflix",
+    "version": 5,
+    "baseUrl": "https://yflix.to",
+    "description": "Yflix Movie Provider",
+    "authors": [
+      "phisher"
+    ],
+    "languages": [
+      "en"
+    ],
+    "categories": [
+      "Movie",
+      "TvSeries"
+    ],
+    "domains": [
+      {
+        "name": "yflix.to",
+        "url": "https://yflix.to"
+      },
+      {
+        "name": "1moviesz.to",
+        "url": "https://1moviesz.to"
+      },
+      {
+        "name": "solarmovie.fi",
+        "url": "https://solarmovie.fi"
+      },
+      {
+        "name": "sflix.fi",
+        "url": "https://sflix.fi"
+      },
+      {
+        "name": "movhub.ws",
+        "url": "https://movhub.ws"
+      },
+      {
+        "name": "flixtor.mov",
+        "url": "https://flixtor.mov"
+      },
+      {
+        "name": "lokkmovie.fi",
+        "url": "https://lokkmovie.fi"
+      },
+      {
+        "name": "bflix.la",
+        "url": "https://bflix.la"
+      },
+      {
+        "name": "myflixer.fi",
+        "url": "https://myflixer.fi"
+      },
+      {
+        "name": "123moviesfree.bz",
+        "url": "https://123moviesfree.bz"
+      },
+      {
+        "name": "hurawatch.la",
+        "url": "https://hurawatch.la"
+      },
+      {
+        "name": "soap2day.fi",
+        "url": "https://soap2day.fi"
+      },
+      {
+        "name": "myflixer.bz",
+        "url": "https://myflixer.bz"
+      },
+      {
+        "name": "watchseries.st",
+        "url": "https://watchseries.st"
+      }
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.yflix.sky"
+  },
+  {
+    "packageName": "dev.akash.stars.yts",
+    "name": "YTS",
+    "version": 3,
+    "baseUrl": "https://yts.gg",
+    "description": "YTS Provider",
+    "authors": [
+      "Akash"
+    ],
+    "languages": [
+      "en"
+    ],
+    "categories": [
+      "Movie"
+    ],
+    "url": "https://raw.githubusercontent.com/akashdh11/skystream-plugins/main/dist/dev.akash.stars.yts.sky"
+  }
+]
