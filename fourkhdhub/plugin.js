@@ -25,12 +25,11 @@
                 this.url = d.url;
                 this.source = d.source;
                 this.name = d.name || d.source;
-                this.quality = typeof d.quality === "number" && d.quality > 0
-                    ? `${d.quality}p` : d.quality;
-                this.size = d.size;
-                this.headers = d.headers;
-                this.type = d.type;
-                this.isM3U8 = d.isM3U8 || d.type === "m3u8";
+                this.headers = d.headers || {};
+                if (d.quality) this.quality = d.quality;
+                if (d.size) this.size = d.size;
+                if (d.type) this.type = d.type;
+                if (d.isM3U8) this.isM3U8 = d.isM3U8;
             }
         };
 
@@ -388,6 +387,71 @@
         return 0;
     }
 
+    function cleanStreamUrl(url) {
+        if (!url) return "";
+        let u = String(url).trim();
+        if (u.includes(" ")) {
+            try {
+                u = encodeURI(u);
+            } catch (_) {
+                u = u.replace(/\s+/g, "%20");
+            }
+        }
+        return u;
+    }
+
+    function isUsableStreamUrl(url) {
+        const value = String(url || "").trim();
+        if (!/^https?:\/\//i.test(value)) return false;
+        if (
+            /gpdl\.hubcdn\.fans|tinyurl\.com\/Unblock-Ban-Site|one\.one\.one\.one|\/cdn-cgi\/challenge-platform\/|\/drive\/admin(?:[/?#]|$)|\/login(?:[/?#]|$)|t\.me\/|telegram|winexch\.com/i.test(
+                value
+            )
+        ) {
+            return false;
+        }
+        if (/\.(m3u8|mp4|mkv|avi|mov|webm)(?:[?#]|$)/i.test(value)) return true;
+        if (/pixeldrain\.(dev|com)\/api\/file\//i.test(value)) return true;
+        if (
+            /video-downloads\.googleusercontent\.com|instant\.busycdn\.xyz|fastcdn-dl\.pages\.dev|rest\.awscdn\.rest|cdn\.[a-z0-9.-]*buzz\/|hub\.diskcdn\.buzz/i.test(
+                value
+            )
+        ) {
+            return true;
+        }
+        if (/hubcloud\.|gamerxyt\.com\/hubcloud\.php/i.test(value)) return true;
+        if (/hub\.hailmary\.lat\/[a-f0-9]+\?token=/i.test(value)) return true;
+        if (/(?:drive|docs)\.google\.com/i.test(value)) return true;
+        return false;
+    }
+
+    function unpackJs(packed) {
+        try {
+            const m = packed.match(/eval\(function\(p,a,c,k,e,d\)[\s\S]*?\}\((['"].*?['"]),\s*(\d+),\s*(\d+),\s*(['"].*?['"])\.split\(['"]\|['"]\)/);
+            if (!m) return "";
+            let p = m[1];
+            if (p.startsWith("'") || p.startsWith('"')) p = p.slice(1, -1);
+            const a = parseInt(m[2], 10);
+            const c = parseInt(m[3], 10);
+            const kStr = m[4];
+            const k = (kStr.startsWith("'") || kStr.startsWith('"') ? kStr.slice(1, -1) : kStr).split("|");
+            
+            function e(c) {
+                return (c < a ? "" : e(Math.floor(c / a))) + ((c = c % a) > 35 ? String.fromCharCode(c + 29) : c.toString(36));
+            }
+            let count = c;
+            while (count--) {
+                if (k[count]) {
+                    const word = e(count);
+                    p = p.replace(new RegExp("\\b" + word + "\\b", "g"), k[count]);
+                }
+            }
+            return p;
+        } catch (_) {
+            return "";
+        }
+    }
+
     function qualityLabel(quality) {
         const q = parseInt(quality, 10);
         return q > 0 ? `${q}p` : "";
@@ -398,17 +462,33 @@
         const qStr = qualityLabel(q);
         const s = cleanText(source) || "Direct";
         if (qStr && !s.toLowerCase().includes(qStr.toLowerCase())) {
-            return `${s} ${qStr}`.trim();
+            return `${s} [${qStr}]`.trim();
         }
         return s;
     }
 
-    // Factory: auto-converts numeric quality to string per schema (e.g. 1080 → "1080p")
+    // Factory: ensures url is clean, quality string is set, headers are present
     function makeStream(opts) {
-        if (typeof opts.quality === "number" && opts.quality > 0) {
-            opts.quality = `${opts.quality}p`;
+        const rawQuality = opts.quality;
+        const qNum = typeof rawQuality === "number" ? rawQuality : parseInt(rawQuality, 10) || 0;
+        const qStr = qNum > 0 ? `${qNum}p` : (typeof rawQuality === "string" ? rawQuality : "");
+
+        let source = String(opts.source || opts.name || "4K HD").trim();
+        if (qStr && !source.toLowerCase().includes(qStr.toLowerCase())) {
+            source = `${source} [${qStr}]`.trim();
         }
-        return new StreamResultClass(opts);
+
+        const url = cleanStreamUrl(opts.url);
+        return new StreamResultClass({
+            url: url,
+            source: source,
+            name: source,
+            quality: qStr || undefined,
+            size: opts.size || undefined,
+            headers: opts.headers || {},
+            type: opts.type || undefined,
+            isM3U8: opts.isM3U8 || opts.type === "m3u8"
+        });
     }
 
     // --- Parallel HTTP Fetcher ---
@@ -706,8 +786,8 @@
                         episodes: [
                             new EpisodeClass({
                                 name: "Full Movie",
-                                season: 1,
-                                episode: 1,
+                                season: 0,
+                                episode: 0,
                                 url: JSON.stringify(urls),
                                 posterUrl: fixedPoster
                             })
@@ -920,41 +1000,63 @@
     //    (http_get uses axios which auto-follows and does NOT expose finalUrl)
     async function resolveFinalUrl(startUrl, maxRedirects = 8) {
         let currentUrl = String(startUrl || "").trim();
+        if (/video-downloads\.googleusercontent\.com/i.test(currentUrl) || /\.(mkv|mp4|m3u8)(?:[?#]|$)/i.test(currentUrl)) {
+            return currentUrl;
+        }
         for (let i = 0; i < maxRedirects; i++) {
-            // Check if current URL already contains dl.php?link=
-            const dlCheck = currentUrl.match(/dl\.php\?link=([^&]+)/i);
+            let dlCheck = currentUrl.match(/dl\.php\?link=([^&]+)/i);
+            if (!dlCheck && currentUrl.includes("link=")) {
+                dlCheck = currentUrl.match(/link=([^&]+)/i);
+            }
             if (dlCheck) {
-                try { return decodeURIComponent(dlCheck[1]); }
-                catch (_) { return dlCheck[1]; }
+                try {
+                    let decoded = decodeURIComponent(dlCheck[1]);
+                    if (decoded.includes("link=")) {
+                        decoded = decodeURIComponent(decoded.substring(decoded.indexOf("link=") + 5).split("&")[0]);
+                    }
+                    if (/^https?:\/\//i.test(decoded)) return decoded;
+                } catch (_) {
+                    if (/^https?:\/\//i.test(dlCheck[1])) return dlCheck[1];
+                }
             }
 
             try {
                 const res = await fetch(currentUrl, {
                     method: "GET",
-                    headers: { ...CommonHeaders, "Referer": currentUrl },
+                    headers: {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                        "Referer": currentUrl
+                    },
                     redirect: "manual"
                 });
 
                 const loc = res.headers.get("location") ||
-                            res.headers.get("hx-redirect");
+                            res.headers.get("Location") ||
+                            res.headers.get("hx-redirect") ||
+                            res.headers.get("HX-Redirect");
                 if (loc && loc.trim()) {
                     try { currentUrl = new URL(loc.trim(), currentUrl).toString(); }
                     catch (_) { currentUrl = loc.trim(); }
                     continue;
                 }
 
-                // No redirect header — read body for embedded links
+                const contentType = res.headers.get("content-type") || "";
+                const contentDisp = res.headers.get("content-disposition") || "";
+                const contentLength = parseInt(res.headers.get("content-length") || "0", 10);
+                if (/video|octet-stream/i.test(contentType) || /attachment/i.test(contentDisp) || contentLength > 1000000) {
+                    return currentUrl;
+                }
+
                 const body = await res.text();
+                const videoMatch = body.match(/https?:\/\/video-downloads\.googleusercontent\.com\/[^\s"'<>]+/i);
+                if (videoMatch) return videoMatch[0];
+
                 const bodyDlMatch = body.match(/dl\.php\?link=([^"'\s&<>]+)/i);
                 if (bodyDlMatch) {
                     try { return decodeURIComponent(bodyDlMatch[1]); }
                     catch (_) { return bodyDlMatch[1]; }
                 }
-                const videoMatch = body.match(/https?:\/\/video-downloads\.googleusercontent\.com\/[^\s"'<>]+/i);
-                if (videoMatch) return videoMatch[0];
 
-                // fetch redirect:"manual" won't populate res.url on 3xx,
-                // but on 200 it may differ from currentUrl
                 if (res.url && res.url !== currentUrl) {
                     const urlDl = res.url.match(/dl\.php\?link=([^&]+)/i);
                     if (urlDl) {
@@ -969,11 +1071,20 @@
             }
         }
 
-        // Final extraction attempt on whatever URL we ended up with
-        const finalDl = currentUrl.match(/dl\.php\?link=([^&]+)/i);
+        let finalDl = currentUrl.match(/dl\.php\?link=([^&]+)/i);
+        if (!finalDl && currentUrl.includes("link=")) {
+            finalDl = currentUrl.match(/link=([^&]+)/i);
+        }
         if (finalDl) {
-            try { return decodeURIComponent(finalDl[1]); }
-            catch (_) { return finalDl[1]; }
+            try {
+                let decoded = decodeURIComponent(finalDl[1]);
+                if (decoded.includes("link=")) {
+                    decoded = decodeURIComponent(decoded.substring(decoded.indexOf("link=") + 5).split("&")[0]);
+                }
+                if (/^https?:\/\//i.test(decoded)) return decoded;
+            } catch (_) {
+                if (/^https?:\/\//i.test(finalDl[1])) return finalDl[1];
+            }
         }
         return currentUrl;
     }
@@ -1095,28 +1206,61 @@
                 const id = btn.attr("id");
                 let link = resolveUrl(dynamicMap[id] || btn.attr("href"), baseUrl);
                 const text = cleanText(btn.text());
-                const lower = text.toLowerCase();
+                const lower = `${text} ${link}`.toLowerCase();
 
                 if (!link || /telegram|facebook|twitter|tinyurl|tutorial|login|logout/i.test(`${link} ${lower}`)) {
                     continue;
                 }
 
+                // Direct Google CDN or known fast CDNs
+                if (/video-downloads\.googleusercontent\.com|instant\.busycdn\.xyz|fastcdn-dl\.pages\.dev|rest\.awscdn\.rest|hub\.diskcdn\.buzz|cdn\.[a-z0-9.-]*buzz/i.test(link)) {
+                    results.push(makeStream({
+                        source: `${sourcePrefix} 10Gbps [Download] ${labelExtras}`.trim(),
+                        url: link,
+                        quality,
+                        size: rawSize || undefined,
+                        headers: {}
+                    }));
+                    continue;
+                }
+
                 if (lower.includes("fsl server")) {
                     results.push(makeStream({
-                        source: `${sourcePrefix} [FSL Server]`,
-                        name: `${sourcePrefix} [FSL Server] ${labelExtras}`.trim(),
+                        source: `${sourcePrefix} [FSL Server] ${labelExtras}`.trim(),
                         url: link,
                         quality,
-                        size: rawSize || undefined
+                        size: rawSize || undefined,
+                        headers: {}
                     }));
-                } else if (lower.includes("instant download") || lower.includes("instant") || lower.includes("download file")) {
-                    results.push(makeStream({
-                        source: `${sourcePrefix} [Instant Download]`,
-                        name: `${sourcePrefix} [Instant Download] ${labelExtras}`.trim(),
-                        url: link,
-                        quality,
-                        size: rawSize || undefined
-                    }));
+                } else if (/10gbps|fast download|download file/i.test(lower) || /10gbps/i.test(link)) {
+                    try {
+                        let finalUrl = await resolveFinalUrl(link);
+                        if (finalUrl && finalUrl.includes("link=")) {
+                            let extracted = finalUrl.substring(finalUrl.indexOf("link=") + 5);
+                            const ampIdx = extracted.indexOf("&");
+                            if (ampIdx !== -1) extracted = extracted.substring(0, ampIdx);
+                            try {
+                                finalUrl = decodeURIComponent(extracted);
+                            } catch (_) {
+                                finalUrl = extracted;
+                            }
+                        }
+                        results.push(makeStream({
+                            source: `${sourcePrefix} 10Gbps [Download] ${labelExtras}`.trim(),
+                            url: finalUrl || link,
+                            quality,
+                            size: rawSize || undefined,
+                            headers: {}
+                        }));
+                    } catch (_) {
+                        results.push(makeStream({
+                            source: `${sourcePrefix} 10Gbps [Download] ${labelExtras}`.trim(),
+                            url: link,
+                            quality,
+                            size: rawSize || undefined,
+                            headers: {}
+                        }));
+                    }
                 } else if (lower.includes("buzzserver") || lower.includes("buzz server") || lower.includes("buzz") || lower.includes("fuckingfast")) {
                     try {
                         const buzzRes = await http_get(link, { ...DesktopHeaders, "Referer": baseUrl });
@@ -1138,11 +1282,11 @@
                             if (redir) {
                                 const finalBuzzUrl = resolveUrl(redir, link);
                                 results.push(makeStream({
-                                    source: `${sourcePrefix} [BuzzServer]`,
-                                    name: `${sourcePrefix} [BuzzServer] ${labelExtras}`.trim(),
+                                    source: `${sourcePrefix} [BuzzServer] ${labelExtras}`.trim(),
                                     url: finalBuzzUrl,
                                     quality,
-                                    size: rawSize || undefined
+                                    size: rawSize || undefined,
+                                    headers: {}
                                 }));
                             }
                         }
@@ -1171,64 +1315,45 @@
 
                     if (fileId && !/negn6f/i.test(fileId)) {
                         results.push(makeStream({
-                            source: `${sourcePrefix} [Pixeldrain]`,
-                            name: `${sourcePrefix} [Pixeldrain] ${labelExtras}`.trim(),
+                            source: `${sourcePrefix} [Pixeldrain] ${labelExtras}`.trim(),
                             url: `https://pixeldrain.dev/api/file/${fileId}?download`,
                             quality,
-                            size: rawSize || undefined
+                            size: rawSize || undefined,
+                            headers: {}
                         }));
                     }
                 } else if (lower.includes("s3 server")) {
                     results.push(makeStream({
-                        source: `${sourcePrefix} [S3 Server]`,
-                        name: `${sourcePrefix} [S3 Server] ${labelExtras}`.trim(),
+                        source: `${sourcePrefix} [S3 Server] ${labelExtras}`.trim(),
                         url: link,
                         quality,
-                        size: rawSize || undefined
+                        size: rawSize || undefined,
+                        headers: {}
                     }));
                 } else if (lower.includes("fslv2")) {
                     results.push(makeStream({
-                        source: `${sourcePrefix} [FSLv2]`,
-                        name: `${sourcePrefix} [FSLv2] ${labelExtras}`.trim(),
+                        source: `${sourcePrefix} [FSLv2] ${labelExtras}`.trim(),
                         url: link,
                         quality,
-                        size: rawSize || undefined
+                        size: rawSize || undefined,
+                        headers: {}
                     }));
                 } else if (lower.includes("mega server")) {
                     results.push(makeStream({
-                        source: `${sourcePrefix} [Mega Server]`,
-                        name: `${sourcePrefix} [Mega Server] ${labelExtras}`.trim(),
+                        source: `${sourcePrefix} [Mega Server] ${labelExtras}`.trim(),
                         url: link,
                         quality,
-                        size: rawSize || undefined
+                        size: rawSize || undefined,
+                        headers: {}
                     }));
                 } else if (lower.includes("pdl server")) {
                     results.push(makeStream({
-                        source: `${sourcePrefix} [PDL Server]`,
-                        name: `${sourcePrefix} [PDL Server] ${labelExtras}`.trim(),
+                        source: `${sourcePrefix} [PDL Server] ${labelExtras}`.trim(),
                         url: link,
                         quality,
-                        size: rawSize || undefined
+                        size: rawSize || undefined,
+                        headers: {}
                     }));
-                } else if (lower.includes("10gbps")) {
-                    try {
-                        const finalUrl = await resolveFinalUrl(link);
-                        results.push(makeStream({
-                            source: `${sourcePrefix} 10Gbps [Download]`,
-                            name: `${sourcePrefix} 10Gbps [Download] ${labelExtras}`.trim(),
-                            url: finalUrl || link,
-                            quality,
-                            size: rawSize || undefined
-                        }));
-                    } catch (_) {
-                        results.push(makeStream({
-                            source: `${sourcePrefix} 10Gbps [Download]`,
-                            name: `${sourcePrefix} 10Gbps [Download] ${labelExtras}`.trim(),
-                            url: link,
-                            quality,
-                            size: rawSize || undefined
-                        }));
-                    }
                 } else if (/pixeldrain|hubcdn|hubdrive|hblinks/i.test(link)) {
                     try {
                         const extra = await loadExtractor(link, sourcePrefix, quality);
@@ -1381,6 +1506,62 @@
         return results;
     }
 
+    // 9. extractHdStream4u: HdStream4u (VidHidePro) extractor
+    async function extractHdStream4u(url, sourcePrefix = "HdStream4u", qualityHint = 0) {
+        const results = [];
+        try {
+            const res = await http_get(url, { ...DesktopHeaders, "Referer": url });
+            if (!res || !res.body) return results;
+            const body = res.body;
+
+            let unpacked = body;
+            const packedMatch = body.match(/eval\(function\(p,a,c,k,e,d\)[\s\S]*?\)\)/);
+            if (packedMatch) {
+                try {
+                    unpacked = unpackJs(packedMatch[0]) || body;
+                } catch (_) {}
+            }
+
+            const m3u8Match = unpacked.match(/https?:\/\/[^"'\s<>]+\.m3u8[^"'\s<>.]*/i) ||
+                              body.match(/https?:\/\/[^"'\s<>]+\.m3u8[^"'\s<>.]*/i);
+            if (m3u8Match) {
+                results.push(makeStream({
+                    source: `${sourcePrefix} [VidHide]`,
+                    url: m3u8Match[0],
+                    type: "m3u8",
+                    isM3U8: true,
+                    headers: { "Referer": url },
+                    quality: qualityHint || parseQuality(m3u8Match[0]) || 1080
+                }));
+            }
+        } catch (_) {}
+        return results;
+    }
+
+    // 10. extractHubstream: Hubstream (VidStack) extractor
+    async function extractHubstream(url, sourcePrefix = "Hubstream", qualityHint = 0) {
+        const results = [];
+        try {
+            const res = await http_get(url, { ...DesktopHeaders, "Referer": url });
+            if (!res || !res.body) return results;
+            const body = res.body;
+            const m3u8 = body.match(/https?:\/\/[^"'\s<>]+\.m3u8[^"'\s<>]*/i) ||
+                         body.match(/file\s*:\s*["']([^"']+\.m3u8[^"']*)["']/i);
+            if (m3u8) {
+                const streamUrl = m3u8[1] || m3u8[0];
+                results.push(makeStream({
+                    source: `${sourcePrefix} [VidStack]`,
+                    url: streamUrl,
+                    type: "m3u8",
+                    isM3U8: true,
+                    headers: { "Referer": url },
+                    quality: qualityHint || parseQuality(streamUrl) || 1080
+                }));
+            }
+        } catch (_) {}
+        return results;
+    }
+
     // Extractor Dispatcher
     async function loadExtractor(url, sourcePrefix = "Auto", qualityHint = 0) {
         const u = String(url || "").trim();
@@ -1388,21 +1569,39 @@
 
         if (lower.includes("pixel.hubcloud")) {
             try {
-                const finalUrl = await resolveFinalUrl(u);
+                let finalUrl = await resolveFinalUrl(u);
+                if (finalUrl && finalUrl.includes("link=")) {
+                    let extracted = finalUrl.substring(finalUrl.indexOf("link=") + 5);
+                    const ampIdx = extracted.indexOf("&");
+                    if (ampIdx !== -1) extracted = extracted.substring(0, ampIdx);
+                    try {
+                        finalUrl = decodeURIComponent(extracted);
+                    } catch (_) {
+                        finalUrl = extracted;
+                    }
+                }
                 return [makeStream({
                     source: `${sourcePrefix} 10Gbps [Download]`,
                     name: `${sourcePrefix} 10Gbps [Download]`,
                     url: finalUrl || u,
-                    quality: qualityHint || parseQuality(u) || 1080
+                    quality: qualityHint || parseQuality(u) || 1080,
+                    headers: {}
                 })];
             } catch (_) {
                 return [makeStream({
                     source: `${sourcePrefix} 10Gbps [Download]`,
                     name: `${sourcePrefix} 10Gbps [Download]`,
                     url: u,
-                    quality: qualityHint || parseQuality(u) || 1080
+                    quality: qualityHint || parseQuality(u) || 1080,
+                    headers: {}
                 })];
             }
+        }
+        if (lower.includes("hdstream4u") || lower.includes("vidhide")) {
+            return await extractHdStream4u(u, sourcePrefix, qualityHint);
+        }
+        if (lower.includes("hubstream") && !lower.includes("hubstream.dad")) {
+            return await extractHubstream(u, sourcePrefix, qualityHint);
         }
         if (lower.includes("hubcloud")) {
             return await extractHubCloud(u, sourcePrefix, qualityHint);
@@ -1427,7 +1626,8 @@
             source: sourceWithQuality(sourcePrefix, qualityHint),
             name: `${sourcePrefix} [Direct]`,
             url: u,
-            quality: qualityHint || parseQuality(u) || 1080
+            quality: qualityHint || parseQuality(u) || 1080,
+            headers: {}
         })];
     }
 
@@ -1498,8 +1698,18 @@
                 } catch (_) {}
             }));
 
-            allStreams.sort((a, b) => (parseInt(b.quality) || 0) - (parseInt(a.quality) || 0));
-            cb({ success: true, data: allStreams });
+            let usableStreams = allStreams.filter(s => s && s.url && isUsableStreamUrl(s.url));
+            if (usableStreams.length === 0 && allStreams.length > 0) {
+                usableStreams = allStreams.filter(s => s && s.url && /^https?:\/\//i.test(s.url) && !/tinyurl|telegram|winexch|login|logout|admin|challenge/i.test(s.url));
+            }
+
+            usableStreams.sort((a, b) => {
+                const qa = parseInt(a.quality, 10) || parseQuality(a.source) || 0;
+                const qb = parseInt(b.quality, 10) || parseQuality(b.source) || 0;
+                return qb - qa;
+            });
+
+            cb({ success: true, data: usableStreams });
         } catch (e) {
             cb({ success: false, errorCode: "STREAM_ERROR", message: e.message || String(e) });
         }

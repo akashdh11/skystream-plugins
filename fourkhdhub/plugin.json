@@ -1,17 +1,10 @@
 {
   "packageName": "dev.akash.stars.4khd",
   "name": "4K HD",
-  "version": 13,
+  "version": 14,
   "baseUrl": "https://4khdhub.one",
   "description": "4K Movies and TV Shows (VOD)",
-  "authors": [
-    "phisher"
-  ],
-  "languages": [
-    "en"
-  ],
-  "categories": [
-    "Movie",
-    "TvSeries"
-  ]
+  "authors": ["phisher"],
+  "languages": ["en"],
+  "categories": ["Movie", "TvSeries"]
 }
