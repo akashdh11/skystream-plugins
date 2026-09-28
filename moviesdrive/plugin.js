@@ -339,12 +339,130 @@
         return "";
     }
 
+    // "Season N" or "SN" - not the "s 720" of "Episodes 720p". Bonus episodes
+    // are specials, season 0. Headings arrive with their pieces run together
+    // ("Bonus Episodes720pAMZN"), so nothing here may rely on a word ending.
     function findSeason(value) {
-        return parseInt(String(value || "").match(/(?:Season|S)\s*(\d+)/i)?.[1] || "1", 10) || 1;
+        const text = String(value || "");
+        if (/\bbonus\s*episode|\bspecials(?![a-z])/i.test(text)) return 0;
+        return parseInt(text.match(/(?:\bSeason\s*|\bS)(\d{1,2})(?!\d)/i)?.[1] || "1", 10) || 1;
     }
 
     function findEpisode(value, fallback) {
         return parseInt(String(value || "").match(/(?:Ep|Episode)\s*0*(\d+)/i)?.[1] || "", 10) || fallback;
+    }
+
+    // A link belongs to the closest label before it. The text before a link
+    // that is long enough to hold its label also holds earlier episodes'
+    // labels, so the last one is the link's own. 0 when there is none.
+    function lastEpisodeIn(value) {
+        const labels = [...String(value || "").matchAll(/\b(?:Episode|Ep)[\s._-]*0*(\d+)/gi)];
+        return labels.length ? parseInt(labels[labels.length - 1][1], 10) || 0 : 0;
+    }
+
+    // Older posts link each quality to HubCloud's file search,
+    // drive/search-recover.php?from_ac=<token>&q=<base64 query>: a page that
+    // runs the search in the browser. Its API answers the same search as JSON.
+    function fileSearchRequest(href) {
+        const match = String(href || "").match(/^(https?:\/\/[^?#]+\/search-recover\.php)\?([^#]*)/i);
+        if (!match) return null;
+        const params = {};
+        match[2].split("&").forEach(pair => {
+            const at = pair.indexOf("=");
+            if (at > 0) params[pair.slice(0, at)] = pair.slice(at + 1);
+        });
+        let query = "";
+        try { query = base64Text(decodeURIComponent(params.q || "")).trim(); } catch {}
+        if (!query || !params.from_ac) return null;
+        return {
+            query,
+            url: `${match[1]}?api=search&q=${encodeURIComponent(query)}&page=1&from_ac=${params.from_ac}`
+        };
+    }
+
+    function base64Text(value) {
+        try {
+            const binary = atob(String(value || "").replace(/-/g, "+").replace(/_/g, "/"));
+            return decodeURIComponent(binary.split("").map(c => "%" + ("0" + c.charCodeAt(0).toString(16)).slice(-2)).join(""));
+        } catch {
+            return "";
+        }
+    }
+
+    // The search is fuzzy: for files that are gone it answers with whatever
+    // comes closest - another title altogether. A hit counts only when its
+    // file name carries every word of the title searched for.
+    function fileSearchHits(body, query) {
+        let hits = [];
+        try { hits = JSON.parse(body).hits || []; } catch {}
+        return hits.filter(hit => hit && hit.url && isSameTitle(hit.file_name, query));
+    }
+
+    const UNTITLED_WORDS = new Set(["download", "the", "a", "an", "and", "of", "zip", "4k"]);
+
+    function titleWords(value) {
+        return String(value || "").toLowerCase().split(/[^a-z0-9\u00c0-\uffff]+/).filter(Boolean);
+    }
+
+    function isSameTitle(fileName, query) {
+        const wanted = titleWords(query).filter(w => !UNTITLED_WORDS.has(w) && !/^\d{3,4}p$/.test(w));
+        const have = new Set(titleWords(fileName));
+        return wanted.length > 0 && wanted.every(w => have.has(w));
+    }
+
+    function seasonEpisodeOf(fileName) {
+        const name = String(fileName || "");
+        const m = name.match(/\bS(\d{1,2})[\s._-]*E(\d{1,3})\b/i) ||
+                  name.match(/Season[\s._-]*(\d{1,2})[\s._-]*Episode[\s._-]*(\d{1,3})/i);
+        return m ? { season: parseInt(m[1], 10), episode: parseInt(m[2], 10) } : null;
+    }
+
+    // HubCloud's 10Gbps buttons lead, through two redirects, to a link
+    // generator, gamerxyt.com/dl.php?link=<file>: a page whose script sends a
+    // browser on to <file>. The file is named only in that page's address,
+    // which the app's http_get reports as finalUrl. "" when it cannot be had.
+    async function resolveLinkGenerator(url) {
+        let res = null;
+        try {
+            res = await withinBudget(http_get(url, { ...CommonHeaders, "Referer": url }), LINK_GENERATOR_BUDGET_MS);
+        } catch {}
+        return res ? unwrapLinkParam(res.finalUrl) : "";
+    }
+
+    // The generator answers straight away for a file it has served before,
+    // but the first request for a large one can take it 15 s or more - too
+    // long to hold every other source back. It finishes regardless, so the
+    // next load finds the answer ready.
+    const LINK_GENERATOR_BUDGET_MS = 8000;
+
+    function withinBudget(promise, ms) {
+        return new Promise(resolve => {
+            const timer = setTimeout(() => resolve(null), ms);
+            promise.then(
+                value => { clearTimeout(timer); resolve(value); },
+                () => { clearTimeout(timer); resolve(null); }
+            );
+        });
+    }
+
+    // The http(s) address in a URL's link= parameter, or "". It arrives as it
+    // is, nothing escaped and running to the end of the URL, or
+    // percent-encoded; a generator can wrap another, so unwrap to the last.
+    function unwrapLinkParam(url) {
+        let found = "";
+        let current = String(url || "");
+        for (let depth = 0; depth < 3; depth++) {
+            const match = current.match(/[?&]link=([^#]+)/i);
+            if (!match) break;
+            let inner = match[1];
+            if (!/^https?:\/\//i.test(inner)) {
+                try { inner = decodeURIComponent(inner.split("&")[0]); } catch { break; }
+            }
+            if (!/^https?:\/\//i.test(inner)) break;
+            found = inner;
+            current = inner;
+        }
+        return found;
     }
 
     function parseSources(dataStr) {
@@ -423,21 +541,27 @@
         return [];
     }
 
-    function extractFinalButtons(html, qual) {
+    async function extractFinalButtons(html, qual) {
         const doc = JsoupLite.parse(html);
         const results = [];
+        // The PixelServer button's own address is a placeholder; the page's
+        // script puts the real one on it: var pxl = "https://pixeldrain.dev/u/<id>".
+        const scriptedPixeldrain = (html.match(/var\s+pxl\w*\s*=\s*["']([^"']+)["']/i) || [])[1] || "";
         const links = doc.select("a");
-        links.forEach(link => {
+        for (const link of links) {
             const href = fixUrl(link.attr("href"));
             const text = link.text().toLowerCase();
             const isBtn = (link.attr("class") || "").includes("btn");
-            if (isBtn && (text.includes("fsl server") || text.includes("fslv2") || text.includes("download file") || text.includes("s3 server") || text.includes("mega server"))) {
+            if (isBtn && (text.includes("10gbps") || /(?:gpdl|pixel)\.hubcloud\./i.test(href))) {
+                const file = await resolveLinkGenerator(href);
+                results.push({ url: file || href, name: "HubCloud", quality: qual, info: link.text().trim() });
+            } else if (isBtn && (text.includes("fsl server") || text.includes("fslv2") || text.includes("download file") || text.includes("s3 server") || text.includes("mega server"))) {
                 results.push({ url: href, name: "HubCloud", quality: qual, info: link.text().trim() });
-            } else if (text.includes("pixeldrain") || text.includes("pixel server")) {
-                const idMatch = /\/u\/([a-zA-Z0-9]+)/.exec(href);
+            } else if (/pixeldrain|pixel\s*server/.test(text)) {
+                const idMatch = /\/u\/([a-zA-Z0-9]+)/.exec(scriptedPixeldrain) || /\/u\/([a-zA-Z0-9]+)/.exec(href);
                 if (idMatch) results.push({ url: `https://pixeldrain.com/api/file/${idMatch[1]}?download`, name: "PixelDrain", quality: qual });
             }
-        });
+        }
         return results;
     }
 
@@ -517,8 +641,16 @@
             const buttonRequests = buttons.map(btn => {
                 const btnText = btn.text();
                 const headingText = previousElementText(btn.parent) || btnText;
-                const btnHref = fixUrl(btn.attr("href"), baseUrl);
+                const btnHref = fixUrl(unescapeHTML(btn.attr("href")), baseUrl);
                 const qual = getQuality(btnText);
+                const search = fileSearchRequest(btnHref);
+                if (search) {
+                    return {
+                        url: search.url,
+                        headers: { ...CommonHeaders, "Accept": "application/json" },
+                        meta: { btnText, headingText, qual, query: search.query }
+                    };
+                }
                 return { url: btnHref, headers: CommonHeaders, meta: { btnText, headingText, qual } };
             });
             const buttonPages = (await fetchMany(buttonRequests)).map(page => ({
@@ -528,9 +660,31 @@
 
             const episodeMap = new Map();
             const movieLinks = [];
+            const addEpisodeLink = (season, episode, source) => {
+                const key = `${season}:${episode}`;
+                const list = episodeMap.get(key) || [];
+                if (!list.some(item => item.source === source.source)) list.push(source);
+                episodeMap.set(key, list);
+            };
 
             buttonPages.forEach(page => {
                 if (!page.body) return;
+                if (page.query) {
+                    fileSearchHits(page.body, page.query).forEach(hit => {
+                        const href = fixUrl(hit.url);
+                        // A search finds every quality of the title; the file's
+                        // own name says which this one is.
+                        const named = getQuality(hit.file_name);
+                        const source = { source: href, quality: named === "Auto" ? page.qual : named };
+                        if (!isSeries) {
+                            if (!movieLinks.some(item => item.source === href)) movieLinks.push(source);
+                            return;
+                        }
+                        const at = seasonEpisodeOf(hit.file_name);
+                        if (at) addEpisodeLink(at.season, at.episode, source);
+                    });
+                    return;
+                }
                 const sDoc = JsoupLite.parse(page.body);
                 const anchors = sDoc.select("a").filter(l => {
                     const href = fixUrl(l.attr("href"), baseUrl);
@@ -551,12 +705,9 @@
                     const idx = page.body.indexOf(l.outerHTML());
                     const context = idx >= 0 ? page.body.substring(Math.max(0, idx - 700), idx + l.outerHTML().length) : `${page.headingText} ${page.btnText} ${lText}`;
                     const season = findSeason(`${page.headingText} ${page.btnText}`);
-                    const episode = findEpisode(`${lText} ${context}`, fallbackEpisode);
+                    const episode = findEpisode(lText, 0) || lastEpisodeIn(context) || fallbackEpisode;
                     fallbackEpisode = Math.max(fallbackEpisode + 1, episode + 1);
-                    const key = `${season}:${episode}`;
-                    const list = episodeMap.get(key) || [];
-                    if (!list.some(item => item.source === href)) list.push(source);
-                    episodeMap.set(key, list);
+                    addEpisodeLink(season, episode, source);
                 });
             });
 

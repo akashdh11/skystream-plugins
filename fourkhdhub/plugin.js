@@ -413,7 +413,7 @@
         if (/\.(m3u8|mp4|mkv|avi|mov|webm)(?:[?#]|$)/i.test(value)) return true;
         if (/pixeldrain\.(dev|com)\/api\/file\//i.test(value)) return true;
         if (
-            /video-downloads\.googleusercontent\.com|instant\.busycdn\.xyz|fastcdn-dl\.pages\.dev|rest\.awscdn\.rest|cdn\.[a-z0-9.-]*buzz\/|hub\.diskcdn\.buzz/i.test(
+            /video-downloads\.googleusercontent\.com|instant\.busycdn\.xyz|fastcdn-dl\.pages\.dev|rest\.awscdn\.rest|cdn\.[a-z0-9.-]*buzz\/|hub\.diskcdn\.buzz|\.r2\.cloudflarestorage\.com\//i.test(
                 value
             )
         ) {
@@ -996,97 +996,75 @@
         }
     }
 
-    // 2. resolveFinalUrl: uses fetch with redirect:"manual" to walk each redirect hop
-    //    (http_get uses axios which auto-follows and does NOT expose finalUrl)
-    async function resolveFinalUrl(startUrl, maxRedirects = 8) {
-        let currentUrl = String(startUrl || "").trim();
-        if (/video-downloads\.googleusercontent\.com/i.test(currentUrl) || /\.(mkv|mp4|m3u8)(?:[?#]|$)/i.test(currentUrl)) {
-            return currentUrl;
+    // 2. resolveFinalUrl: follows a download button to the file behind it.
+    //    HubCloud's 10Gbps buttons redirect twice and end on a link generator,
+    //    gamerxyt.com/dl.php?link=<file>: a web page whose script sends a
+    //    browser on to <file>. A player handed the button's own link gets that
+    //    page, not the video, and the file is named only in the page's address.
+    //    Plugins have no fetch; the app's http_get follows redirects itself and
+    //    reports the address it ended on as finalUrl.
+    async function resolveFinalUrl(startUrl) {
+        const start = String(startUrl || "").trim();
+        if (/video-downloads\.googleusercontent\.com/i.test(start) || /\.(mkv|mp4|m3u8)(?:[?#]|$)/i.test(start)) {
+            return start;
         }
-        for (let i = 0; i < maxRedirects; i++) {
-            let dlCheck = currentUrl.match(/dl\.php\?link=([^&]+)/i);
-            if (!dlCheck && currentUrl.includes("link=")) {
-                dlCheck = currentUrl.match(/link=([^&]+)/i);
+        const named = unwrapLinkParam(start);
+        if (named) return named;
+
+        let res = null;
+        try {
+            res = await withinBudget(
+                http_get(start, { ...CommonHeaders, "Referer": start }),
+                LINK_GENERATOR_BUDGET_MS
+            );
+        } catch (_) {}
+        if (!res) return start;
+
+        const landed = unwrapLinkParam(res.finalUrl);
+        if (landed) return landed;
+
+        const body = String(res.body || "");
+        const videoMatch = body.match(/https?:\/\/video-downloads\.googleusercontent\.com\/[^\s"'<>]+/i);
+        if (videoMatch) return videoMatch[0];
+        const bodyDlMatch = body.match(/dl\.php\?link=[^"'\s<>]+/i);
+        return (bodyDlMatch && unwrapLinkParam(bodyDlMatch[0])) || start;
+    }
+
+    // How long a stream list waits for a link generator. HubCloud's answers
+    // straight away for a file it has served before, but the first request
+    // for a large one can take it 15 s or more - too long to hold every other
+    // source back. The generator finishes regardless, so the next load finds
+    // the answer ready; until then the button's own link stands.
+    const LINK_GENERATOR_BUDGET_MS = 8000;
+
+    function withinBudget(promise, ms) {
+        return new Promise(resolve => {
+            const timer = setTimeout(() => resolve(null), ms);
+            promise.then(
+                value => { clearTimeout(timer); resolve(value); },
+                () => { clearTimeout(timer); resolve(null); }
+            );
+        });
+    }
+
+    // The http(s) address in a URL's link= parameter, or "". It arrives as it
+    // is, nothing escaped and running to the end of the URL, or
+    // percent-encoded; a generator can wrap another, so unwrap to the last.
+    function unwrapLinkParam(url) {
+        let found = "";
+        let current = String(url || "");
+        for (let depth = 0; depth < 3; depth++) {
+            const match = current.match(/[?&]link=([^#]+)/i);
+            if (!match) break;
+            let inner = match[1];
+            if (!/^https?:\/\//i.test(inner)) {
+                try { inner = decodeURIComponent(inner.split("&")[0]); } catch (_) { break; }
             }
-            if (dlCheck) {
-                try {
-                    let decoded = decodeURIComponent(dlCheck[1]);
-                    if (decoded.includes("link=")) {
-                        decoded = decodeURIComponent(decoded.substring(decoded.indexOf("link=") + 5).split("&")[0]);
-                    }
-                    if (/^https?:\/\//i.test(decoded)) return decoded;
-                } catch (_) {
-                    if (/^https?:\/\//i.test(dlCheck[1])) return dlCheck[1];
-                }
-            }
-
-            try {
-                const res = await fetch(currentUrl, {
-                    method: "GET",
-                    headers: {
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-                        "Referer": currentUrl
-                    },
-                    redirect: "manual"
-                });
-
-                const loc = res.headers.get("location") ||
-                            res.headers.get("Location") ||
-                            res.headers.get("hx-redirect") ||
-                            res.headers.get("HX-Redirect");
-                if (loc && loc.trim()) {
-                    try { currentUrl = new URL(loc.trim(), currentUrl).toString(); }
-                    catch (_) { currentUrl = loc.trim(); }
-                    continue;
-                }
-
-                const contentType = res.headers.get("content-type") || "";
-                const contentDisp = res.headers.get("content-disposition") || "";
-                const contentLength = parseInt(res.headers.get("content-length") || "0", 10);
-                if (/video|octet-stream/i.test(contentType) || /attachment/i.test(contentDisp) || contentLength > 1000000) {
-                    return currentUrl;
-                }
-
-                const body = await res.text();
-                const videoMatch = body.match(/https?:\/\/video-downloads\.googleusercontent\.com\/[^\s"'<>]+/i);
-                if (videoMatch) return videoMatch[0];
-
-                const bodyDlMatch = body.match(/dl\.php\?link=([^"'\s&<>]+)/i);
-                if (bodyDlMatch) {
-                    try { return decodeURIComponent(bodyDlMatch[1]); }
-                    catch (_) { return bodyDlMatch[1]; }
-                }
-
-                if (res.url && res.url !== currentUrl) {
-                    const urlDl = res.url.match(/dl\.php\?link=([^&]+)/i);
-                    if (urlDl) {
-                        try { return decodeURIComponent(urlDl[1]); }
-                        catch (_) { return urlDl[1]; }
-                    }
-                    currentUrl = res.url;
-                }
-                break;
-            } catch (_) {
-                break;
-            }
+            if (!/^https?:\/\//i.test(inner)) break;
+            found = inner;
+            current = inner;
         }
-
-        let finalDl = currentUrl.match(/dl\.php\?link=([^&]+)/i);
-        if (!finalDl && currentUrl.includes("link=")) {
-            finalDl = currentUrl.match(/link=([^&]+)/i);
-        }
-        if (finalDl) {
-            try {
-                let decoded = decodeURIComponent(finalDl[1]);
-                if (decoded.includes("link=")) {
-                    decoded = decodeURIComponent(decoded.substring(decoded.indexOf("link=") + 5).split("&")[0]);
-                }
-                if (/^https?:\/\//i.test(decoded)) return decoded;
-            } catch (_) {
-                if (/^https?:\/\//i.test(finalDl[1])) return finalDl[1];
-            }
-        }
-        return currentUrl;
+        return found;
     }
 
     // Clean title and quality detection for HubCloud headers
@@ -1233,34 +1211,14 @@
                         headers: {}
                     }));
                 } else if (/10gbps|fast download|download file/i.test(lower) || /10gbps/i.test(link)) {
-                    try {
-                        let finalUrl = await resolveFinalUrl(link);
-                        if (finalUrl && finalUrl.includes("link=")) {
-                            let extracted = finalUrl.substring(finalUrl.indexOf("link=") + 5);
-                            const ampIdx = extracted.indexOf("&");
-                            if (ampIdx !== -1) extracted = extracted.substring(0, ampIdx);
-                            try {
-                                finalUrl = decodeURIComponent(extracted);
-                            } catch (_) {
-                                finalUrl = extracted;
-                            }
-                        }
-                        results.push(makeStream({
-                            source: `${sourcePrefix} 10Gbps [Download] ${labelExtras}`.trim(),
-                            url: finalUrl || link,
-                            quality,
-                            size: rawSize || undefined,
-                            headers: {}
-                        }));
-                    } catch (_) {
-                        results.push(makeStream({
-                            source: `${sourcePrefix} 10Gbps [Download] ${labelExtras}`.trim(),
-                            url: link,
-                            quality,
-                            size: rawSize || undefined,
-                            headers: {}
-                        }));
-                    }
+                    const finalUrl = await resolveFinalUrl(link);
+                    results.push(makeStream({
+                        source: `${sourcePrefix} 10Gbps [Download] ${labelExtras}`.trim(),
+                        url: finalUrl || link,
+                        quality,
+                        size: rawSize || undefined,
+                        headers: {}
+                    }));
                 } else if (lower.includes("buzzserver") || lower.includes("buzz server") || lower.includes("buzz") || lower.includes("fuckingfast")) {
                     try {
                         const buzzRes = await http_get(link, { ...DesktopHeaders, "Referer": baseUrl });
@@ -1568,34 +1526,14 @@
         const lower = u.toLowerCase();
 
         if (lower.includes("pixel.hubcloud")) {
-            try {
-                let finalUrl = await resolveFinalUrl(u);
-                if (finalUrl && finalUrl.includes("link=")) {
-                    let extracted = finalUrl.substring(finalUrl.indexOf("link=") + 5);
-                    const ampIdx = extracted.indexOf("&");
-                    if (ampIdx !== -1) extracted = extracted.substring(0, ampIdx);
-                    try {
-                        finalUrl = decodeURIComponent(extracted);
-                    } catch (_) {
-                        finalUrl = extracted;
-                    }
-                }
-                return [makeStream({
-                    source: `${sourcePrefix} 10Gbps [Download]`,
-                    name: `${sourcePrefix} 10Gbps [Download]`,
-                    url: finalUrl || u,
-                    quality: qualityHint || parseQuality(u) || 1080,
-                    headers: {}
-                })];
-            } catch (_) {
-                return [makeStream({
-                    source: `${sourcePrefix} 10Gbps [Download]`,
-                    name: `${sourcePrefix} 10Gbps [Download]`,
-                    url: u,
-                    quality: qualityHint || parseQuality(u) || 1080,
-                    headers: {}
-                })];
-            }
+            const finalUrl = await resolveFinalUrl(u);
+            return [makeStream({
+                source: `${sourcePrefix} 10Gbps [Download]`,
+                name: `${sourcePrefix} 10Gbps [Download]`,
+                url: finalUrl || u,
+                quality: qualityHint || parseQuality(u) || 1080,
+                headers: {}
+            })];
         }
         if (lower.includes("hdstream4u") || lower.includes("vidhide")) {
             return await extractHdStream4u(u, sourcePrefix, qualityHint);
