@@ -2,7 +2,7 @@
   {
     "packageName": "dev.akash.stars.4khd",
     "name": "4K HD",
-    "version": 14,
+    "version": 15,
     "baseUrl": "https://4khdhub.one",
     "description": "4K Movies and TV Shows (VOD)",
     "authors": [
@@ -39,7 +39,7 @@
   {
     "packageName": "dev.akash.stars.moviesdrive",
     "name": "Movies Drive",
-    "version": 6,
+    "version": 7,
     "baseUrl": "https://new2.moviesdrives.my",
     "domains": [
       {
